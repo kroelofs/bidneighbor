@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, money, type Category, type Task, type Me } from "../lib/api";
+import { loginHref } from "../lib/config";
 import { useMode } from "../lib/mode";
 import Provider from "./Provider";
 
@@ -39,14 +40,14 @@ function SplitHero() {
           <p className="mt-1 flex-1 text-sm text-gray-600 dark:text-gray-300">
             Post what you need done. Neighbors and pros respond with questions and quotes.
           </p>
-          <Link to="/post-task" className="btn-primary mt-4 w-full">Post a task</Link>
+          <a href={loginHref()} className="btn-primary mt-4 w-full">Post a task</a>
         </div>
         <div className="card flex flex-col items-center text-center">
           <h2 className="text-xl font-bold">Want local work?</h2>
           <p className="mt-1 flex-1 text-sm text-gray-600 dark:text-gray-300">
             Browse jobs people near you need done and send a message or quote.
           </p>
-          <Link to="/tasks" className="btn-secondary mt-4 w-full">See jobs near you</Link>
+          <a href={loginHref()} className="btn-secondary mt-4 w-full">See jobs near you</a>
         </div>
       </div>
       <CategoryGrid />
