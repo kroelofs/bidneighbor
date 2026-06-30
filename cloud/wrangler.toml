@@ -42,6 +42,11 @@ queue = "bidneighbor-notifications"
 max_batch_size = 10
 max_retries = 3
 
+# Daily image retention sweep (see worker/src/cron.ts): R2 Standard -> Infrequent
+# Access at 30 days, delete at 90 days.
+[triggers]
+crons = ["0 4 * * *"]
+
 # Production routes are managed MANUALLY in the Cloudflare dashboard
 # (Workers Routes → `*.bidneighbor.com/*` → bidneighbor), NOT here. The deploy
 # API token is an account-scoped token without Zone→Workers Routes:Edit, so
