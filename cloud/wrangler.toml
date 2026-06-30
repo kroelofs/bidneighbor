@@ -15,7 +15,7 @@ binding = "ASSETS"
 [vars]
 APP_BASE_URL = "https://app.bidneighbor.com"
 ADMIN_BASE_URL = "https://admin.bidneighbor.com"
-EMAIL_FROM = "no-reply@bidneighbor.com"
+EMAIL_FROM = "BidNeighbor <no-reply@bidneighbor.com>"
 APP_HOST = "app.bidneighbor.com"
 ADMIN_HOST = "admin.bidneighbor.com"
 
