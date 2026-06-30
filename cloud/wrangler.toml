@@ -19,7 +19,7 @@ ADMIN_HOST = "admin.bidneighbor.com"
 [[d1_databases]]
 binding = "DB"
 database_name = "bidneighbor"
-database_id = "00000000-0000-0000-0000-000000000000" # replace after `wrangler d1 create bidneighbor`
+database_id = "d4d4de60-e6b8-4de3-b6a7-f8fff9f3ba75"
 migrations_dir = "d1"
 
 [[r2_buckets]]
@@ -28,7 +28,7 @@ bucket_name = "bidneighbor-uploads"
 
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "0000000000000000000000000000000000" # replace after `wrangler kv namespace create RATE_LIMITS`
+id = "6d10a652b0cf48e987aef6ad13433b0e"
 
 [[queues.producers]]
 binding = "NOTIFICATION_QUEUE"
