@@ -27,5 +27,7 @@ export function selfUser(u: UserRow) {
     avatar_url: u.avatar_url,
     theme_preference: u.theme_preference,
     status: u.status,
+    notify_new_tasks: u.notify_new_tasks,
+    notify_responses: u.notify_responses,
   };
 }

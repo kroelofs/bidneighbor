@@ -13,6 +13,8 @@ export interface Me {
   avatar_url: string | null;
   theme_preference: "light" | "dark";
   status: "active" | "suspended";
+  notify_new_tasks: number; // 0|1
+  notify_responses: number; // 0|1
 }
 
 export interface MeResponse {

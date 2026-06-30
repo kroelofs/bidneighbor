@@ -36,11 +36,12 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
         "SELECT t.id, t.title, t.county, t.category_id, c.name AS category_name FROM tasks t JOIN categories c ON c.id = t.category_id WHERE t.id = ?",
       ).bind(job.task_id).first<{ id: string; title: string; county: string | null; category_id: string; category_name: string }>();
       if (!task) return;
-      // Matching rule: same county + subscribed to the category + active provider.
+      // Matching rule: same county + subscribed to the category + active provider
+      // who hasn't turned off new-task emails.
       const { results } = await env.DB.prepare(
         `SELECT DISTINCT u.id, u.email FROM users u
          JOIN user_categories uc ON uc.user_id = u.id AND uc.category_id = ?
-         WHERE u.status = 'active' AND (u.county = ? OR ? IS NULL)`,
+         WHERE u.status = 'active' AND u.notify_new_tasks = 1 AND (u.county = ? OR ? IS NULL)`,
       ).bind(task.category_id, task.county, task.county).all<{ id: string; email: string }>();
       for (const provider of results ?? []) {
         await recordAndSend(env, provider.id, "task_posted", provider.email, "New local job posted",
@@ -51,11 +52,11 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
     }
     case "response_received": {
       const row = await env.DB.prepare(
-        `SELECT t.title, t.id AS task_id, cust.email AS customer_email
+        `SELECT t.title, t.id AS task_id, cust.email AS customer_email, cust.notify_responses
          FROM responses r JOIN tasks t ON t.id = r.task_id JOIN users cust ON cust.id = t.customer_id
          WHERE r.id = ?`,
-      ).bind(job.response_id).first<{ title: string; task_id: string; customer_email: string }>();
-      if (!row) return;
+      ).bind(job.response_id).first<{ title: string; task_id: string; customer_email: string; notify_responses: number }>();
+      if (!row || row.notify_responses !== 1) return;
       await recordAndSend(env, null, "response_received", row.customer_email, "You got a response",
         layout("Someone responded to your job", `<p>You have a new response on <b>${row.title}</b>.</p>
          <p><a href="${env.APP_BASE_URL}/tasks/${row.task_id}">View responses</a></p>`));
@@ -63,11 +64,11 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
     }
     case "response_selected": {
       const row = await env.DB.prepare(
-        `SELECT t.title, t.id AS task_id, prov.email AS provider_email
+        `SELECT t.title, t.id AS task_id, prov.email AS provider_email, prov.notify_responses
          FROM responses r JOIN tasks t ON t.id = r.task_id JOIN users prov ON prov.id = r.provider_id
          WHERE r.id = ?`,
-      ).bind(job.response_id).first<{ title: string; task_id: string; provider_email: string }>();
-      if (!row) return;
+      ).bind(job.response_id).first<{ title: string; task_id: string; provider_email: string; notify_responses: number }>();
+      if (!row || row.notify_responses !== 1) return;
       await recordAndSend(env, null, "response_selected", row.provider_email, "You were selected!",
         layout("You were selected for a job", `<p>You were selected for <b>${row.title}</b>. Nice work!</p>
          <p><a href="${env.APP_BASE_URL}/tasks/${row.task_id}">View the job</a></p>`));
