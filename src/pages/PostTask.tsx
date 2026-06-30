@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Category, type Me } from "../lib/api";
 import { COUNTIES, DEFAULT_COUNTY, townsForCounty } from "../lib/geo";
+import { Turnstile } from "../components/Turnstile";
 
 export default function PostTask({ me }: { me: Me | null; onChange: () => void }) {
   const nav = useNavigate();
@@ -19,6 +20,7 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
   const [files, setFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<{ categories: Category[] }>("/api/categories").then((d) => setCats(d.categories)).catch(() => {});
@@ -40,7 +42,7 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<{ id: string; share_url: string }>("/api/tasks", { ...form, turnstileToken: null });
+      const res = await api.post<{ id: string; share_url: string }>("/api/tasks", { ...form, turnstileToken: token });
       if (files && files.length) {
         for (const file of Array.from(files).slice(0, 5)) {
           const fd = new FormData();
@@ -110,10 +112,9 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
           <label className="label">Photos (optional — JPG, PNG, PDF)</label>
           <input className="input" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setFiles(e.target.files)} />
         </div>
-        {/* Turnstile widget mounts here in production. */}
-        <div id="turnstile-container" />
+        <Turnstile onToken={setToken} />
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button type="submit" disabled={busy} className="btn-primary w-full disabled:opacity-60">
+        <button type="submit" disabled={busy || !token} className="btn-primary w-full disabled:opacity-60">
           {busy ? "Posting…" : "Post task"}
         </button>
       </form>

@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { api } from "../lib/api";
+import { Turnstile } from "../components/Turnstile";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
-  // Turnstile token would be collected by the widget; null is accepted in dev.
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api.post("/api/auth/request-link", { email, turnstileToken: null });
+      await api.post("/api/auth/request-link", { email, turnstileToken: token });
       setSent(true);
     } catch (err) {
       setError((err as Error).message);
@@ -44,10 +45,9 @@ export default function Login() {
             <label className="label" htmlFor="email">Email address</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="you@example.com" />
           </div>
-          {/* Turnstile widget mounts here in production (data-sitekey). */}
-          <div id="turnstile-container" />
+          <Turnstile onToken={setToken} />
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          <button type="submit" disabled={busy} className="btn-primary w-full disabled:opacity-60">
+          <button type="submit" disabled={busy || !token} className="btn-primary w-full disabled:opacity-60">
             {busy ? "Sending…" : "Email me a sign-in link"}
           </button>
         </form>
