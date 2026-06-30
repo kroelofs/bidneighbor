@@ -431,6 +431,7 @@ shareable task link.
 | `/tasks` | Task moderation — filter, change status, hide/remove |
 | `/responses` | Response moderation |
 | `/categories` | Category CRUD |
+| `/integrations` | Integration & binding status/health (read-only diagnostics; no secret values) |
 | `/flags` | Moderation queue |
 | `/audit` | Audit log viewer |
 
