@@ -59,7 +59,7 @@ export default function Tasks() {
           <p className="text-gray-500">No open jobs match your filters yet.</p>
         ) : (
           tasks.map((t) => (
-            <Link key={t.id} to={`/tasks/${t.id}`} className="card block hover:border-brand-500">
+            <Link key={t.id} to={`/tasks/${t.slug}`} className="card block hover:border-brand-500">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold">{t.title}</h3>

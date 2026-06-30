@@ -2,6 +2,7 @@ import type { Env, NotificationJob } from "./types";
 import { routeApi } from "./router";
 import { resolveSession } from "./lib/session";
 import { handleQueue } from "./queue";
+import { injectTaskOg } from "./lib/og";
 
 export default {
   async fetch(req: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -42,6 +43,18 @@ export default {
     const shellPath = isAdminHost ? "/admin.html" : "/index.html";
     const shellReq = new Request(new URL(shellPath, url.origin).toString(), { headers: req.headers });
     const shell = await env.ASSETS.fetch(shellReq);
+
+    // On the public host, enrich a task page's shell with Open Graph / Twitter meta
+    // so shared links show the title + first image. Falls back to the plain shell.
+    if (!isAdminHost && url.pathname.startsWith("/tasks/")) {
+      const baseHtml = await shell.text();
+      const enriched = await injectTaskOg(env, url.pathname, baseHtml).catch(() => null);
+      return new Response(enriched ?? baseHtml, {
+        status: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
+
     return new Response(shell.body, {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8" },

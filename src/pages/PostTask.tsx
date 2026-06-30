@@ -4,6 +4,8 @@ import { api, type Category, type Me } from "../lib/api";
 import { COUNTIES, DEFAULT_COUNTY, townsForCounty } from "../lib/geo";
 import { Turnstile } from "../components/Turnstile";
 
+const MAX_IMAGES = 4;
+
 export default function PostTask({ me }: { me: Me | null; onChange: () => void }) {
   const nav = useNavigate();
   const [cats, setCats] = useState<Category[]>([]);
@@ -42,15 +44,15 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<{ id: string; share_url: string }>("/api/tasks", { ...form, turnstileToken: token });
+      const res = await api.post<{ id: string; slug: string; share_url: string }>("/api/tasks", { ...form, turnstileToken: token });
       if (files && files.length) {
-        for (const file of Array.from(files).slice(0, 5)) {
+        for (const file of Array.from(files).slice(0, MAX_IMAGES)) {
           const fd = new FormData();
           fd.set("file", file);
           await api.upload(`/api/tasks/${res.id}/files`, fd).catch(() => {});
         }
       }
-      nav(`/tasks/${res.id}?posted=1`);
+      nav(`/tasks/${res.slug}?posted=1`);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -112,8 +114,11 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
           </div>
         </div>
         <div>
-          <label className="label">Photos (optional — JPG, PNG, PDF)</label>
+          <label className="label">Photos (optional — up to {MAX_IMAGES}, JPG/PNG/WebP/PDF)</label>
           <input className="input" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setFiles(e.target.files)} />
+          {files && files.length > MAX_IMAGES ? (
+            <p className="mt-1 text-xs text-amber-600">Only the first {MAX_IMAGES} files will be uploaded.</p>
+          ) : null}
         </div>
         <Turnstile onToken={setToken} />
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

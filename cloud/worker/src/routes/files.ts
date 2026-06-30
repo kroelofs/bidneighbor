@@ -2,7 +2,7 @@ import type { Env, AuthContext } from "../types";
 import { json, badRequest, forbidden, unauthorized, notFound, uuid, now } from "../lib/http";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_FILES_PER_TASK = 5;
+const MAX_FILES_PER_TASK = 4;
 const ALLOWED = new Map<string, number[]>([
   ["image/jpeg", [0xff, 0xd8, 0xff]],
   ["image/png", [0x89, 0x50, 0x4e, 0x47]],

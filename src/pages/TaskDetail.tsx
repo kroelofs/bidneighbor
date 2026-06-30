@@ -13,7 +13,9 @@ interface ResponseItem {
 interface FileItem { id: string; filename: string | null; content_type: string }
 
 export default function TaskDetail({ me }: { me: Me | null }) {
-  const { id } = useParams();
+  // The route param is a slug ("<title>-<locality>-<id8>") or a legacy UUID; the
+  // server resolves either. All follow-up calls use the canonical task.id.
+  const { id: ref } = useParams();
   const [params] = useSearchParams();
   const [task, setTask] = useState<Task | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -23,16 +25,26 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   const [quote, setQuote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const taskId = task?.id;
+
   const loadResponses = () => {
-    if (!me || !id) return;
-    api.get<{ responses: ResponseItem[] }>(`/api/tasks/${id}/responses`).then((d) => setResponses(d.responses)).catch(() => {});
+    if (!me || !taskId) return;
+    api.get<{ responses: ResponseItem[] }>(`/api/tasks/${taskId}/responses`).then((d) => setResponses(d.responses)).catch(() => {});
   };
 
   useEffect(() => {
-    if (!id) return;
-    api.get<{ task: Task; files: FileItem[] }>(`/api/tasks/${id}`).then((d) => { setTask(d.task); setFiles(d.files); }).catch(() => setTask(null));
-  }, [id]);
-  useEffect(loadResponses, [id, me]);
+    if (!ref) return;
+    api.get<{ task: Task; files: FileItem[] }>(`/api/tasks/${ref}`).then((d) => {
+      setTask(d.task);
+      setFiles(d.files);
+      // Upgrade legacy/short URLs in the address bar to the canonical pretty slug.
+      const canonical = new URL(d.task.share_url).pathname;
+      if (window.location.pathname !== canonical) {
+        window.history.replaceState(null, "", canonical + window.location.search);
+      }
+    }).catch(() => setTask(null));
+  }, [ref]);
+  useEffect(loadResponses, [taskId, me]);
 
   if (!task) return <p className="text-gray-500">Loading…</p>;
   // Ownership is enforced server-side: the owner endpoint returns every provider's
@@ -47,7 +59,7 @@ export default function TaskDetail({ me }: { me: Me | null }) {
     e.preventDefault();
     setError(null);
     try {
-      await api.post(`/api/tasks/${id}/responses`, { message, quote });
+      await api.post(`/api/tasks/${taskId}/responses`, { message, quote });
       setMessage(""); setQuote("");
       loadResponses();
     } catch (err) {
@@ -56,7 +68,7 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   };
 
   const select = async (responseId: string) => {
-    await api.post(`/api/tasks/${id}/select-response`, { response_id: responseId }).catch(() => {});
+    await api.post(`/api/tasks/${taskId}/select-response`, { response_id: responseId }).catch(() => {});
     loadResponses();
   };
 
@@ -77,15 +89,37 @@ export default function TaskDetail({ me }: { me: Me | null }) {
       <p className="mt-4 whitespace-pre-wrap">{task.description}</p>
       {task.location_note ? <p className="mt-2 text-sm text-gray-500">Area: {task.location_note}</p> : null}
 
-      {files.length ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {files.map((f) => (
-            <a key={f.id} href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" className="text-sm text-brand-600 underline">
-              {f.content_type.startsWith("image/") ? "View photo" : f.filename || "View file"}
-            </a>
-          ))}
-        </div>
-      ) : null}
+      {(() => {
+        const images = files.filter((f) => f.content_type.startsWith("image/")).slice(0, 4);
+        const others = files.filter((f) => !f.content_type.startsWith("image/"));
+        return (
+          <>
+            {images.length ? (
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {images.map((f) => (
+                  <a key={f.id} href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" className="block">
+                    <img
+                      src={`/api/files/${f.id}`}
+                      alt={f.filename || "Task photo"}
+                      loading="lazy"
+                      className="aspect-square w-full rounded-lg border border-gray-200 object-cover dark:border-gray-800"
+                    />
+                  </a>
+                ))}
+              </div>
+            ) : null}
+            {others.length ? (
+              <div className="mt-3 flex flex-wrap gap-3">
+                {others.map((f) => (
+                  <a key={f.id} href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" className="text-sm text-brand-600 underline">
+                    {f.filename || "View file"}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </>
+        );
+      })()}
 
       {/* Respond (providers) */}
       {me ? (

@@ -62,6 +62,7 @@ export interface Task {
   timeframe: string | null;
   status: string;
   created_at: string;
+  slug: string;
   share_url: string;
 }
 

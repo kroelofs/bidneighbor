@@ -5,6 +5,7 @@ import { rateLimit } from "../lib/ratelimit";
 import { verifyTurnstile } from "../lib/turnstile";
 import { isSuspended } from "../lib/guards";
 import { publicUser } from "../lib/serialize";
+import { taskSlug, taskIdFilter } from "../lib/taskref";
 
 interface TaskRow {
   id: string;
@@ -27,6 +28,7 @@ interface TaskRow {
  *  `share_url` is always built from APP_BASE_URL so links shared from any host
  *  (including admin.bidneighbor.com) point at the public app host. */
 function publicTask(t: TaskRow & { category_name?: string }, appBase: string) {
+  const slug = taskSlug(t);
   return {
     id: t.id,
     title: t.title,
@@ -40,7 +42,8 @@ function publicTask(t: TaskRow & { category_name?: string }, appBase: string) {
     timeframe: t.timeframe,
     status: t.status,
     created_at: t.created_at,
-    share_url: `${appBase}/tasks/${t.id}`,
+    slug,
+    share_url: `${appBase}/tasks/${slug}`,
   };
 }
 
@@ -81,14 +84,15 @@ export async function createTask(req: Request, env: Env, auth: AuthContext | nul
 
   const id = uuid();
   const ts = now();
+  const town = sanitizeText(body.town, 80) || auth.user.town;
+  const county = sanitizeText(body.county, 80) || auth.user.county;
   await env.DB.prepare(
     `INSERT INTO tasks (id, customer_id, title, description, category_id, town, county, location_note, budget_cents, timeframe, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`,
   )
     .bind(
       id, auth.user.id, title, description, category_id,
-      sanitizeText(body.town, 80) || auth.user.town,
-      sanitizeText(body.county, 80) || auth.user.county,
+      town, county,
       sanitizeText(body.location_note, 200),
       toCents(body.budget),
       sanitizeText(body.timeframe, 60),
@@ -96,18 +100,23 @@ export async function createTask(req: Request, env: Env, auth: AuthContext | nul
     )
     .run();
   await env.NOTIFICATION_QUEUE.send({ type: "task_posted", task_id: id });
-  return json({ id, share_url: `${env.APP_BASE_URL}/tasks/${id}` });
+  const slug = taskSlug({ id, title, town, county });
+  return json({ id, slug, share_url: `${env.APP_BASE_URL}/tasks/${slug}` });
 }
 
-/** GET /api/tasks/:id — public detail (contact info hidden). */
-export async function getTask(_req: Request, env: Env, id: string): Promise<Response> {
+/** GET /api/tasks/:ref — public detail (contact info hidden).
+ *  `ref` is a slug ("<title>-<locality>-<id8>") or a full UUID (legacy links). */
+export async function getTask(_req: Request, env: Env, ref: string): Promise<Response> {
+  const filter = taskIdFilter(ref, "t.id");
+  if (!filter) return notFound();
   const task = await env.DB.prepare(
-    `SELECT t.*, c.name AS category_name FROM tasks t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ?`,
-  ).bind(id).first<TaskRow & { category_name: string }>();
+    `SELECT t.*, c.name AS category_name FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+     WHERE ${filter.clause} ORDER BY t.id LIMIT 1`,
+  ).bind(...filter.binds).first<TaskRow & { category_name: string }>();
   if (!task || task.status === "hidden") return notFound();
   const files = await env.DB.prepare(
     "SELECT id, filename, content_type FROM task_files WHERE task_id = ? ORDER BY created_at",
-  ).bind(id).all();
+  ).bind(task.id).all();
   return json({ task: publicTask(task, env.APP_BASE_URL), files: files.results ?? [] });
 }
 
