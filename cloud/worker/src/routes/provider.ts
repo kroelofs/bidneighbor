@@ -82,6 +82,9 @@ export async function updateProfile(req: Request, env: Env, auth: AuthContext | 
   if (body.theme_preference === "light" || body.theme_preference === "dark") {
     sets.push("theme_preference = ?"); binds.push(body.theme_preference);
   }
+  if (body.last_mode === "neighbor" || body.last_mode === "provider") {
+    sets.push("last_mode = ?"); binds.push(body.last_mode);
+  }
   for (const key of ["notify_new_tasks", "notify_responses"] as const) {
     if (typeof body[key] === "boolean" || body[key] === 0 || body[key] === 1) {
       sets.push(`${key} = ?`); binds.push(body[key] ? 1 : 0);

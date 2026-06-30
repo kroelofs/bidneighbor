@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./lib/theme";
+import { ModeProvider, type Mode } from "./lib/mode";
 import { Layout } from "./components/Layout";
 import AddressOnboarding from "./components/AddressOnboarding";
 import { useMe } from "./lib/useMe";
@@ -24,32 +25,37 @@ export default function App() {
   const persistTheme = (t: "light" | "dark") => {
     if (me) api.patch("/api/me", { theme_preference: t }).catch(() => {});
   };
+  const persistMode = (m: Mode) => {
+    if (me) api.patch("/api/me", { last_mode: m }).catch(() => {});
+  };
 
   return (
     <ThemeProvider onPersist={persistTheme} reconcileTo={me?.theme_preference ?? null}>
-      {!loading && <AddressOnboarding me={me} onSaved={refresh} />}
-      <Layout me={me} impersonating={impersonating}>
-        {loading ? (
-          <p className="py-12 text-center text-gray-500">Loading…</p>
-        ) : (
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/post-task" element={<PostTask me={me} onChange={refresh} />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/tasks/:id" element={<TaskDetail me={me} />} />
-            <Route path="/my-tasks" element={<MyTasks me={me} />} />
-            <Route path="/provider" element={<Provider me={me} />} />
-            <Route path="/provider/profile" element={<ProviderProfile me={me} onChange={refresh} />} />
-            <Route path="/settings" element={<Settings me={me} onChange={refresh} />} />
-            <Route path="/providers" element={<Providers />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/sms-policy" element={<SmsPolicy />} />
-            <Route path="*" element={<p className="py-12 text-center">Page not found.</p>} />
-          </Routes>
-        )}
-      </Layout>
+      <ModeProvider onPersist={persistMode} reconcileTo={me?.last_mode ?? null}>
+        {!loading && <AddressOnboarding me={me} onSaved={refresh} />}
+        <Layout me={me} impersonating={impersonating} onRefresh={refresh}>
+          {loading ? (
+            <p className="py-12 text-center text-gray-500">Loading…</p>
+          ) : (
+            <Routes>
+              <Route path="/" element={<Home me={me} />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/post-task" element={<PostTask me={me} onChange={refresh} />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/tasks/:id" element={<TaskDetail me={me} />} />
+              <Route path="/my-tasks" element={<MyTasks me={me} />} />
+              <Route path="/provider" element={<Provider me={me} />} />
+              <Route path="/provider/profile" element={<ProviderProfile me={me} onChange={refresh} />} />
+              <Route path="/settings" element={<Settings me={me} onChange={refresh} />} />
+              <Route path="/providers" element={<Providers />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/sms-policy" element={<SmsPolicy />} />
+              <Route path="*" element={<p className="py-12 text-center">Page not found.</p>} />
+            </Routes>
+          )}
+        </Layout>
+      </ModeProvider>
     </ThemeProvider>
   );
 }

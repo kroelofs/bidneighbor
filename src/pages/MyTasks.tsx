@@ -7,10 +7,10 @@ export default function MyTasks({ me }: { me: Me | null }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // The public board only shows open tasks; for "my tasks" we filter client-side
-    // from the board plus any assigned ones. (A dedicated /api/my-tasks can be added.)
-    api.get<{ tasks: Task[] }>("/api/tasks").then((d) => setTasks(d.tasks)).finally(() => setLoading(false));
-  }, []);
+    if (!me) { setLoading(false); return; }
+    // The user's own tasks across every status (open, assigned, completed, …).
+    api.get<{ tasks: Task[] }>("/api/my-tasks").then((d) => setTasks(d.tasks)).catch(() => {}).finally(() => setLoading(false));
+  }, [me]);
 
   if (!me) return <p className="text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to see your tasks.</p>;
 
@@ -22,7 +22,7 @@ export default function MyTasks({ me }: { me: Me | null }) {
       </div>
       <div className="mt-4 space-y-3">
         {loading ? <p className="text-gray-500">Loading…</p> : tasks.length === 0 ? (
-          <p className="text-gray-500">You haven't posted any open tasks yet.</p>
+          <p className="text-gray-500">You haven't posted any tasks yet.</p>
         ) : tasks.map((t) => (
           <Link key={t.id} to={`/tasks/${t.slug}`} className="card block hover:border-brand-500">
             <div className="flex items-center justify-between">

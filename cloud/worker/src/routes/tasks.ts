@@ -105,8 +105,10 @@ export async function createTask(req: Request, env: Env, auth: AuthContext | nul
 }
 
 /** GET /api/tasks/:ref — public detail (contact info hidden).
- *  `ref` is a slug ("<title>-<locality>-<id8>") or a full UUID (legacy links). */
-export async function getTask(_req: Request, env: Env, ref: string): Promise<Response> {
+ *  `ref` is a slug ("<title>-<locality>-<id8>") or a full UUID (legacy links).
+ *  When the requester is signed in we also return `is_owner` so the client can show
+ *  owner controls vs the respond form without guessing from response counts. */
+export async function getTask(_req: Request, env: Env, auth: AuthContext | null, ref: string): Promise<Response> {
   const filter = taskIdFilter(ref, "t.id");
   if (!filter) return notFound();
   const task = await env.DB.prepare(
@@ -117,7 +119,19 @@ export async function getTask(_req: Request, env: Env, ref: string): Promise<Res
   const files = await env.DB.prepare(
     "SELECT id, filename, content_type FROM task_files WHERE task_id = ? ORDER BY created_at",
   ).bind(task.id).all();
-  return json({ task: publicTask(task, env.APP_BASE_URL), files: files.results ?? [] });
+  const is_owner = !!auth && auth.user.id === task.customer_id;
+  return json({ task: publicTask(task, env.APP_BASE_URL), files: files.results ?? [], is_owner });
+}
+
+/** GET /api/my-tasks — the signed-in user's own posted tasks (any status). */
+export async function myTasks(_req: Request, env: Env, auth: AuthContext | null): Promise<Response> {
+  if (!auth) return unauthorized();
+  const { results } = await env.DB.prepare(
+    `SELECT t.*, c.name AS category_name FROM tasks t
+     LEFT JOIN categories c ON c.id = t.category_id
+     WHERE t.customer_id = ? AND t.status != 'hidden' ORDER BY t.created_at DESC LIMIT 100`,
+  ).bind(auth.user.id).all<TaskRow & { category_name: string }>();
+  return json({ tasks: (results ?? []).map((t) => publicTask(t, env.APP_BASE_URL)) });
 }
 
 /** PATCH /api/tasks/:id — owner only (edit / close / cancel). */

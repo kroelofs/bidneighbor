@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, money, type Task, type Me } from "../lib/api";
+import { useMode } from "../lib/mode";
 
 interface ResponseItem {
   id: string;
@@ -16,8 +17,10 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   // The route param is a slug ("<title>-<locality>-<id8>") or a legacy UUID; the
   // server resolves either. All follow-up calls use the canonical task.id.
   const { id: ref } = useParams();
+  const { mode, setMode } = useMode();
   const [params] = useSearchParams();
   const [task, setTask] = useState<Task | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [responses, setResponses] = useState<ResponseItem[]>([]);
   const [sort, setSort] = useState<"newest" | "price">("newest");
@@ -34,8 +37,9 @@ export default function TaskDetail({ me }: { me: Me | null }) {
 
   useEffect(() => {
     if (!ref) return;
-    api.get<{ task: Task; files: FileItem[] }>(`/api/tasks/${ref}`).then((d) => {
+    api.get<{ task: Task; files: FileItem[]; is_owner?: boolean }>(`/api/tasks/${ref}`).then((d) => {
       setTask(d.task);
+      setIsOwner(!!d.is_owner);
       setFiles(d.files);
       // Upgrade legacy/short URLs in the address bar to the canonical pretty slug.
       const canonical = new URL(d.task.share_url).pathname;
@@ -47,9 +51,11 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   useEffect(loadResponses, [taskId, me]);
 
   if (!task) return <p className="text-gray-500">Loading…</p>;
-  // Ownership is enforced server-side: the owner endpoint returns every provider's
-  // response, so seeing a response from someone other than yourself means you're the owner.
-  const ownerView = !!me && (responses.some((r) => r.provider.id !== me.id) || task.status === "assigned");
+  // Ownership comes straight from the API (it knows the task's customer_id); no more
+  // guessing from response counts. The owner always sees owner controls; a non-owner
+  // sees the respond form only in the "Do jobs" lens.
+  const ownerView = isOwner;
+  const canRespond = !!me && !isOwner && task.status === "open";
 
   const sorted = [...responses].sort((a, b) =>
     sort === "price" ? (a.quote_cents ?? Infinity) - (b.quote_cents ?? Infinity) : b.created_at.localeCompare(a.created_at),
@@ -121,8 +127,15 @@ export default function TaskDetail({ me }: { me: Me | null }) {
         );
       })()}
 
-      {/* Respond (providers) */}
-      {me ? (
+      {/* Respond — only for a signed-in non-owner. The "Do jobs" lens shows the form;
+          the "Get help" lens shows a one-tap nudge to switch so the form makes sense. */}
+      {!me ? (
+        <p className="mt-6 text-sm text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to respond to this job.</p>
+      ) : isOwner ? (
+        <p className="mt-6 text-sm text-gray-500">This is your task. Responses from providers appear below.</p>
+      ) : !canRespond ? (
+        <p className="mt-6 text-sm text-gray-500">This task is no longer open for new bids.</p>
+      ) : mode === "provider" ? (
         <div className="card mt-6">
           <h2 className="font-semibold">Interested? Send a message or quote</h2>
           <form onSubmit={submitResponse} className="mt-3 space-y-3">
@@ -133,14 +146,17 @@ export default function TaskDetail({ me }: { me: Me | null }) {
           </form>
         </div>
       ) : (
-        <p className="mt-6 text-sm text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to respond to this job.</p>
+        <div className="card mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-300">Want to do this job?</p>
+          <button onClick={() => setMode("provider")} className="btn-primary mt-3">Switch to Do jobs to respond</button>
+        </div>
       )}
 
-      {/* Responses (owner sees all + can select) */}
+      {/* Bids (owner sees all + can select; a provider sees only their own) */}
       {responses.length ? (
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Responses ({responses.length})</h2>
+            <h2 className="font-semibold">{isOwner ? "Bids" : "Your bid"} ({responses.length})</h2>
             {ownerView ? (
               <select className="input !w-auto !py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value as "newest" | "price")}>
                 <option value="newest">Newest</option>
