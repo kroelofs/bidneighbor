@@ -39,6 +39,9 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
   // ---- Categories ----
   if (path === "/api/categories" && method === "GET") return categories.listCategories(req, env);
 
+  // ---- Public provider directory ----
+  if (path === "/api/providers" && method === "GET") return provider.listProviders(req, env);
+
   // ---- Tasks ----
   if (path === "/api/tasks" && method === "GET") return tasks.listTasks(req, env);
   if (path === "/api/tasks" && method === "POST") return tasks.createTask(req, env, ctx.auth);

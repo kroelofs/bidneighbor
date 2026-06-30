@@ -6,7 +6,7 @@ import { COUNTIES, DEFAULT_COUNTY } from "../lib/geo";
 export default function ProviderProfile({ me, onChange }: { me: Me | null; onChange: () => void }) {
   const [cats, setCats] = useState<Category[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [profile, setProfile] = useState({ name: "", phone: "", county: DEFAULT_COUNTY, town: "", provider_bio: "" });
+  const [profile, setProfile] = useState({ name: "", phone: "", county: DEFAULT_COUNTY, town: "", street_address: "", city: "", state: "", zip: "", provider_bio: "" });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -20,6 +20,10 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
       phone: me.phone ?? "",
       county: me.county ?? DEFAULT_COUNTY,
       town: me.town ?? "",
+      street_address: me.street_address ?? "",
+      city: me.city ?? "",
+      state: me.state ?? "",
+      zip: me.zip ?? "",
       provider_bio: me.provider_bio ?? "",
     });
   }, [me]);
@@ -61,6 +65,16 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
           </div>
           <div><label className="label">Town</label><input className="input" value={profile.town} onChange={(e) => setProfile({ ...profile, town: e.target.value })} /></div>
         </div>
+        <div>
+          <label className="label">Street address (private)</label>
+          <input className="input" value={profile.street_address} onChange={(e) => setProfile({ ...profile, street_address: e.target.value })} placeholder="123 Main St" />
+        </div>
+        <div className="grid grid-cols-6 gap-3">
+          <div className="col-span-3"><label className="label">City</label><input className="input" value={profile.city} onChange={(e) => setProfile({ ...profile, city: e.target.value })} /></div>
+          <div className="col-span-1"><label className="label">State</label><input className="input" maxLength={2} value={profile.state} onChange={(e) => setProfile({ ...profile, state: e.target.value.toUpperCase() })} placeholder="IA" /></div>
+          <div className="col-span-2"><label className="label">ZIP</label><input className="input" inputMode="numeric" maxLength={10} value={profile.zip} onChange={(e) => setProfile({ ...profile, zip: e.target.value })} /></div>
+        </div>
+        <p className="text-xs text-gray-500">Your public directory listing shows only your name, city, state, and ZIP — never your street address or phone.</p>
         <div><label className="label">Short bio</label><textarea className="input" value={profile.provider_bio} onChange={(e) => setProfile({ ...profile, provider_bio: e.target.value })} placeholder="What you do, experience, etc." /></div>
 
         <div>

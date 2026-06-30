@@ -9,6 +9,10 @@ export interface Me {
   admin_level: "superadmin" | "admin" | "platform_manager" | null;
   town: string | null;
   county: string | null;
+  street_address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   provider_bio: string | null;
   avatar_url: string | null;
   theme_preference: "light" | "dark";
