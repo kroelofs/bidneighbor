@@ -1,0 +1,57 @@
+name = "bidneighbor"
+main = "worker/src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static frontend assets (output of `npm run build:web` → cloud/public).
+# The Worker runs first; non-/api requests fall through to asset serving + SPA shells.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+APP_BASE_URL = "https://app.bidneighbor.com"
+ADMIN_BASE_URL = "https://admin.bidneighbor.com"
+EMAIL_FROM = "no-reply@bidneighbor.com"
+APP_HOST = "app.bidneighbor.com"
+ADMIN_HOST = "admin.bidneighbor.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bidneighbor"
+database_id = "00000000-0000-0000-0000-000000000000" # replace after `wrangler d1 create bidneighbor`
+migrations_dir = "d1"
+
+[[r2_buckets]]
+binding = "TASK_UPLOADS"
+bucket_name = "bidneighbor-uploads"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "0000000000000000000000000000000000" # replace after `wrangler kv namespace create RATE_LIMITS`
+
+[[queues.producers]]
+binding = "NOTIFICATION_QUEUE"
+queue = "bidneighbor-notifications"
+
+[[queues.consumers]]
+queue = "bidneighbor-notifications"
+max_batch_size = 10
+max_retries = 3
+
+# Production routes — both hostnames hit this one Worker; it routes by Host header.
+# Uncomment once DNS records for app./admin. exist in the bidneighbor.com zone.
+# [[routes]]
+# pattern = "app.bidneighbor.com/*"
+# zone_name = "bidneighbor.com"
+#
+# [[routes]]
+# pattern = "admin.bidneighbor.com/*"
+# zone_name = "bidneighbor.com"
+
+# Runtime secrets (set with `wrangler secret put <NAME>`):
+#   TURNSTILE_SECRET_KEY
+#   EMAIL_API_KEY                (Resend)
+#   GOOGLE_OAUTH_CLIENT_ID
+#   GOOGLE_OAUTH_CLIENT_SECRET
+#   SESSION_SIGNING_KEY          (random 32+ bytes)

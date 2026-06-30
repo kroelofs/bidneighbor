@@ -1,0 +1,31 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+env
+cloud/.dev.vars
+cloud/.dev.vars.local
+.d1-dumps/
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+cloud/public/
+.wrangler/
+.vite/
+node_modules/.vite/
+
+# Editor / OS
+.DS_Store
+*.local
+.idea/
+*.log
+npm-debug.log*
+
+# Cloudflare
+.mf/
+wrangler.toml.bak

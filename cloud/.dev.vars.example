@@ -1,0 +1,13 @@
+# Local Worker secrets — copy to cloud/.dev.vars (gitignored) and fill in.
+# `wrangler dev` reads this file; in production these are set via `wrangler secret put`.
+
+TURNSTILE_SECRET_KEY=
+EMAIL_API_KEY=            # Resend API key (re_...)
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+SESSION_SIGNING_KEY=dev-insecure-signing-key-change-me
+
+# Leaving a value blank disables that integration in dev gracefully:
+#   no EMAIL_API_KEY  -> magic-link emails are logged to the console instead of sent
+#   no TURNSTILE_*    -> Turnstile checks pass automatically
+#   no GOOGLE_*       -> the "Continue with Google" button returns 503

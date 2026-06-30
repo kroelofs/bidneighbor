@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BidNeighbor — Post a local job, get responses from nearby people</title>
+    <meta name="description" content="Post a local job. Get responses from nearby people and businesses in your county." />
+    <script>
+      // No-flash theme. Default is LIGHT (white) — we intentionally do NOT follow the
+      // OS prefers-color-scheme, so first-time visitors always get white.
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (t === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

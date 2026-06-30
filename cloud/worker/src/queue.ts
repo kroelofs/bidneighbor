@@ -1,0 +1,95 @@
+import type { Env, NotificationJob } from "./types";
+import { sendEmail, layout } from "./lib/email";
+import { uuid, now } from "./lib/http";
+
+/**
+ * Notification consumer. This is where ALL email is sent — never inside
+ * ctx.waitUntil (30s cap + silent cancellation). Queues give at-least-once
+ * delivery with retries; throwing on a batch message re-delivers it.
+ */
+export async function handleQueue(batch: MessageBatch<NotificationJob>, env: Env): Promise<void> {
+  for (const msg of batch.messages) {
+    try {
+      await handleJob(msg.body, env);
+      msg.ack();
+    } catch (err) {
+      console.error("notification job failed", msg.body, err);
+      msg.retry();
+    }
+  }
+}
+
+async function handleJob(job: NotificationJob, env: Env): Promise<void> {
+  switch (job.type) {
+    case "magic_link": {
+      const html = layout(
+        "Sign in to BidNeighbor",
+        `<p>Click the button below to sign in. This link expires in 15 minutes.</p>
+         <p><a href="${job.link}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Sign in</a></p>
+         <p style="font-size:12px;color:#888">If you didn't request this, you can ignore it.</p>`,
+      );
+      await sendEmail(env, job.email, "Your BidNeighbor sign-in link", html);
+      return;
+    }
+    case "task_posted": {
+      const task = await env.DB.prepare(
+        "SELECT t.id, t.title, t.county, t.category_id, c.name AS category_name FROM tasks t JOIN categories c ON c.id = t.category_id WHERE t.id = ?",
+      ).bind(job.task_id).first<{ id: string; title: string; county: string | null; category_id: string; category_name: string }>();
+      if (!task) return;
+      // Matching rule: same county + subscribed to the category + active provider.
+      const { results } = await env.DB.prepare(
+        `SELECT DISTINCT u.id, u.email FROM users u
+         JOIN user_categories uc ON uc.user_id = u.id AND uc.category_id = ?
+         WHERE u.status = 'active' AND (u.county = ? OR ? IS NULL)`,
+      ).bind(task.category_id, task.county, task.county).all<{ id: string; email: string }>();
+      for (const provider of results ?? []) {
+        await recordAndSend(env, provider.id, "task_posted", provider.email, "New local job posted",
+          layout("New job near you", `<p>A new <b>${task.category_name}</b> job was posted in ${task.county ?? "your area"}: <b>${task.title}</b>.</p>
+           <p><a href="${env.APP_BASE_URL}/tasks/${task.id}">View the job</a></p>`));
+      }
+      return;
+    }
+    case "response_received": {
+      const row = await env.DB.prepare(
+        `SELECT t.title, t.id AS task_id, cust.email AS customer_email
+         FROM responses r JOIN tasks t ON t.id = r.task_id JOIN users cust ON cust.id = t.customer_id
+         WHERE r.id = ?`,
+      ).bind(job.response_id).first<{ title: string; task_id: string; customer_email: string }>();
+      if (!row) return;
+      await recordAndSend(env, null, "response_received", row.customer_email, "You got a response",
+        layout("Someone responded to your job", `<p>You have a new response on <b>${row.title}</b>.</p>
+         <p><a href="${env.APP_BASE_URL}/tasks/${row.task_id}">View responses</a></p>`));
+      return;
+    }
+    case "response_selected": {
+      const row = await env.DB.prepare(
+        `SELECT t.title, t.id AS task_id, prov.email AS provider_email
+         FROM responses r JOIN tasks t ON t.id = r.task_id JOIN users prov ON prov.id = r.provider_id
+         WHERE r.id = ?`,
+      ).bind(job.response_id).first<{ title: string; task_id: string; provider_email: string }>();
+      if (!row) return;
+      await recordAndSend(env, null, "response_selected", row.provider_email, "You were selected!",
+        layout("You were selected for a job", `<p>You were selected for <b>${row.title}</b>. Nice work!</p>
+         <p><a href="${env.APP_BASE_URL}/tasks/${row.task_id}">View the job</a></p>`));
+      return;
+    }
+  }
+}
+
+async function recordAndSend(
+  env: Env,
+  userId: string | null,
+  type: string,
+  to: string,
+  subject: string,
+  html: string,
+): Promise<void> {
+  const id = uuid();
+  await env.DB.prepare(
+    "INSERT INTO notifications (id, user_id, type, payload_json, status, created_at) VALUES (?, ?, ?, ?, 'queued', ?)",
+  ).bind(id, userId, type, JSON.stringify({ to, subject }), now()).run();
+  const res = await sendEmail(env, to, subject, html);
+  await env.DB.prepare("UPDATE notifications SET status = ?, sent_at = ? WHERE id = ?")
+    .bind(res.ok ? "sent" : "failed", now(), id).run();
+  if (!res.ok) throw new Error(`email send failed: ${res.detail ?? "unknown"}`);
+}
