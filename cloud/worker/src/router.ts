@@ -8,6 +8,7 @@ import * as tasks from "./routes/tasks";
 import * as responses from "./routes/responses";
 import * as files from "./routes/files";
 import * as provider from "./routes/provider";
+import * as places from "./routes/places";
 import * as admin from "./routes/admin";
 
 type Ctx = { req: Request; env: Env; auth: AuthContext | null; isAdminHost: boolean };
@@ -35,6 +36,10 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
   if (path === "/api/logout" && method === "POST") return auth.logout(req, env, ctx.auth);
   if (path === "/api/me" && method === "GET") return auth.me(req, env, ctx.auth);
   if (path === "/api/me" && method === "PATCH") return provider.updateProfile(req, env, ctx.auth);
+
+  // ---- Address autocomplete (Google Places proxy; sign-in required) ----
+  if (path === "/api/places/autocomplete" && method === "POST") return places.autocomplete(req, env, ctx.auth);
+  if (path === "/api/places/details" && method === "GET") return places.details(req, env, ctx.auth);
 
   // ---- Categories ----
   if (path === "/api/categories" && method === "GET") return categories.listCategories(req, env);

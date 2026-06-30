@@ -13,6 +13,8 @@ export interface Me {
   city: string | null;
   state: string | null;
   zip: string | null;
+  latitude: number | null;
+  longitude: number | null;
   provider_bio: string | null;
   avatar_url: string | null;
   theme_preference: "light" | "dark";

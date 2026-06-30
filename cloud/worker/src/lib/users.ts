@@ -43,6 +43,8 @@ export async function findOrCreateByEmail(
     city: null,
     state: null,
     zip: null,
+    latitude: null,
+    longitude: null,
     provider_bio: null,
     avatar_url: opts.avatarUrl ?? null,
     theme_preference: "light",

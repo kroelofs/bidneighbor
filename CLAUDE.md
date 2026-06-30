@@ -41,6 +41,16 @@ docs/             — specs + planning docs
 5. Merging to `main` triggers `.github/workflows/deploy.yml`, which re-verifies, applies pending D1 migrations, and deploys to Cloudflare. **Merge *is* deploy.**
 
 ### Day-to-day flow
+> **Use a git worktree for any non-trivial / multi-file feature** (new pages + routes + migrations,
+> integrations, refactors). Develop in an isolated worktree so `main` and other in-flight branches stay
+> clean and never collide:
+> ```bash
+> git worktree add ../bidneighbor-<feature> -b feat/<feature>
+> # work, commit, push, open PR from inside the worktree, then:
+> git worktree remove ../bidneighbor-<feature>
+> ```
+> Small single-file tweaks can skip this and use a plain branch below.
+
 ```bash
 # 1. Branch — never commit on main
 git checkout -b feat/my-change
