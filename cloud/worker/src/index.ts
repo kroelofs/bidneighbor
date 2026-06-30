@@ -2,6 +2,7 @@ import type { Env, NotificationJob } from "./types";
 import { routeApi } from "./router";
 import { resolveSession } from "./lib/session";
 import { handleQueue } from "./queue";
+import { handleScheduled } from "./cron";
 import { injectTaskOg } from "./lib/og";
 
 export default {
@@ -63,5 +64,9 @@ export default {
 
   async queue(batch: MessageBatch<NotificationJob>, env: Env): Promise<void> {
     await handleQueue(batch, env);
+  },
+
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(handleScheduled(env));
   },
 };
