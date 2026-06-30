@@ -2,6 +2,9 @@ name = "bidneighbor"
 main = "worker/src/index.ts"
 compatibility_date = "2026-06-01"
 compatibility_flags = ["nodejs_compat"]
+# Pinned so CI/deploy doesn't call /memberships (an account-scoped API token
+# can't list user memberships — that returns code 9106). Not sensitive.
+account_id = "7b18c4252596092391086feef44012e0"
 
 # Static frontend assets (output of `npm run build:web` → cloud/public).
 # The Worker runs first; non-/api requests fall through to asset serving + SPA shells.
