@@ -1,6 +1,17 @@
 import type { Env, AuthContext } from "../types";
 import { json, unauthorized, now } from "../lib/http";
 
+/** GET /api/providers — public directory. Returns ONLY name + city/state/zip;
+ *  never email, phone, or street address. */
+export async function listProviders(_req: Request, env: Env): Promise<Response> {
+  const { results } = await env.DB.prepare(
+    `SELECT id, name, city, state, zip FROM users
+     WHERE role = 'provider' AND status = 'active'
+     ORDER BY state, city, name LIMIT 500`,
+  ).all<{ id: string; name: string | null; city: string | null; state: string | null; zip: string | null }>();
+  return json({ providers: results ?? [] });
+}
+
 /** GET /api/provider/tasks — open tasks matching this provider's county + subscribed categories. */
 export async function providerTasks(_req: Request, env: Env, auth: AuthContext | null): Promise<Response> {
   if (!auth) return unauthorized();
@@ -61,6 +72,7 @@ export async function updateProfile(req: Request, env: Env, auth: AuthContext | 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const fields: Array<[string, string]> = [
     ["name", "name"], ["phone", "phone"], ["town", "town"], ["county", "county"], ["provider_bio", "provider_bio"],
+    ["street_address", "street_address"], ["city", "city"], ["state", "state"], ["zip", "zip"],
   ];
   const sets: string[] = [];
   const binds: unknown[] = [];

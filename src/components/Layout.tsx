@@ -57,6 +57,7 @@ export function Layout({
         <div className="mx-auto flex max-w-4xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-gray-500 sm:flex-row">
           <p>© {new Date().getFullYear()} BidNeighbor</p>
           <nav className="flex flex-wrap items-center justify-center gap-4">
+            <Link to="/providers" className="hover:underline">Find providers</Link>
             <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
             <Link to="/terms" className="hover:underline">Terms of Service</Link>
             <Link to="/sms-policy" className="hover:underline">SMS Policy</Link>
