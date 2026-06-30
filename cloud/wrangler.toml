@@ -42,15 +42,19 @@ queue = "bidneighbor-notifications"
 max_batch_size = 10
 max_retries = 3
 
-# Production routes — both hostnames hit this one Worker; it routes by Host header.
-# Backed by proxied CNAME records for app./admin. in the bidneighbor.com zone.
-[[routes]]
-pattern = "app.bidneighbor.com/*"
-zone_name = "bidneighbor.com"
-
-[[routes]]
-pattern = "admin.bidneighbor.com/*"
-zone_name = "bidneighbor.com"
+# Production routes are managed MANUALLY in the Cloudflare dashboard
+# (Workers Routes → `*.bidneighbor.com/*` → bidneighbor), NOT here. The deploy
+# API token is an account-scoped token without Zone→Workers Routes:Edit, so
+# wrangler cannot reconcile routes — listing them here makes every deploy fail at
+# the route step. The dashboard wildcard route covers app. + admin. (the Worker
+# routes by Host header). If the token later gains Zone Workers Routes:Edit on the
+# bidneighbor.com zone, these can be restored:
+#   [[routes]]
+#   pattern = "app.bidneighbor.com/*"
+#   zone_name = "bidneighbor.com"
+#   [[routes]]
+#   pattern = "admin.bidneighbor.com/*"
+#   zone_name = "bidneighbor.com"
 
 # Runtime secrets (set with `wrangler secret put <NAME>`):
 #   TURNSTILE_SECRET_KEY
