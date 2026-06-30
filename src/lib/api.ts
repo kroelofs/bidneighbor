@@ -56,6 +56,7 @@ export interface Task {
   timeframe: string | null;
   status: string;
   created_at: string;
+  share_url: string;
 }
 
 export function money(cents: number | null): string {
