@@ -24,7 +24,7 @@ export default function MyTasks({ me }: { me: Me | null }) {
         {loading ? <p className="text-gray-500">Loading…</p> : tasks.length === 0 ? (
           <p className="text-gray-500">You haven't posted any open tasks yet.</p>
         ) : tasks.map((t) => (
-          <Link key={t.id} to={`/tasks/${t.id}`} className="card block hover:border-brand-500">
+          <Link key={t.id} to={`/tasks/${t.slug}`} className="card block hover:border-brand-500">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">{t.title}</h3>
               <span className="text-xs uppercase text-gray-400">{t.status}</span>

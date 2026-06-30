@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { sanitizeText, slugify, isEmail, toCents } from "../cloud/worker/src/lib/text";
+import { taskSlug, taskIdFilter } from "../cloud/worker/src/lib/taskref";
 import { match } from "../cloud/worker/src/lib/match";
 import { sign, unsign } from "../cloud/worker/src/lib/crypto";
 import { isAdmin, canImpersonate } from "../cloud/worker/src/lib/guards";
@@ -44,6 +45,32 @@ describe("text helpers", () => {
     expect(toCents("$1,234.50")).toBe(123450);
     expect(toCents("")).toBeNull();
     expect(toCents("-5")).toBe(500); // sign stripped before parse
+  });
+});
+
+describe("task slug + ref resolution", () => {
+  const id = "baa45b4a-f220-475f-b6c1-d653ec23d577";
+
+  it("builds a readable slug from title + locality + id8", () => {
+    expect(taskSlug({ id, title: "Mow my yard!", town: "Sioux Center", county: "Sioux" }))
+      .toBe("mow-my-yard-sioux-center-baa45b4a");
+  });
+  it("omits empty locality but always ends with id8", () => {
+    expect(taskSlug({ id, title: "Fix gutter", town: null, county: null }))
+      .toBe("fix-gutter-baa45b4a");
+  });
+  it("resolves a full UUID ref to an exact-id filter", () => {
+    expect(taskIdFilter(id, "t.id")).toEqual({ clause: "t.id = ?", binds: [id] });
+  });
+  it("resolves a slug ref to an id8 prefix range that brackets the real id", () => {
+    const f = taskIdFilter("mow-my-yard-sioux-center-baa45b4a");
+    expect(f).toEqual({ clause: "id >= ? AND id < ?", binds: ["baa45b4a", "baa45b4ag"] });
+    // the actual uuid must fall inside the range
+    expect(id >= f!.binds[0] && id < f!.binds[1]).toBe(true);
+  });
+  it("returns null when there is no valid id8 tail", () => {
+    expect(taskIdFilter("not-a-real-task")).toBeNull();
+    expect(taskIdFilter("")).toBeNull();
   });
 });
 
