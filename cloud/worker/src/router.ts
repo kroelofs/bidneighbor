@@ -10,6 +10,7 @@ import * as files from "./routes/files";
 import * as provider from "./routes/provider";
 import * as places from "./routes/places";
 import * as admin from "./routes/admin";
+import { getGeo } from "./routes/geo";
 
 type Ctx = { req: Request; env: Env; auth: AuthContext | null; isAdminHost: boolean };
 
@@ -46,6 +47,9 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
 
   // ---- Public provider directory ----
   if (path === "/api/providers" && method === "GET") return provider.listProviders(req, env);
+
+  // ---- Approximate location (edge geo; client calls only after consent) ----
+  if (path === "/api/geo" && method === "GET") return getGeo(req);
 
   // ---- Tasks ----
   if (path === "/api/tasks" && method === "GET") return tasks.listTasks(req, env);

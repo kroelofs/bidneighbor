@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 import { UserMenu } from "./UserMenu";
+import { GeoConsent } from "./GeoConsent";
 import { type Me } from "../lib/api";
 
 const APP_ORIGIN = "https://app.bidneighbor.com";
@@ -64,6 +65,7 @@ export function Layout({
           </nav>
         </div>
       </footer>
+      <GeoConsent />
     </div>
   );
 }

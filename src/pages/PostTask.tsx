@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Category, type Me } from "../lib/api";
 import { COUNTIES, DEFAULT_COUNTY, townsForCounty } from "../lib/geo";
+import { loadGeo } from "../lib/geoConsent";
 import { Turnstile } from "../components/Turnstile";
 
 const MAX_IMAGES = 4;
@@ -26,6 +27,15 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
 
   useEffect(() => {
     api.get<{ categories: Category[] }>("/api/categories").then((d) => setCats(d.categories)).catch(() => {});
+    // If the visitor consented to location and their city is a town we serve, pre-fill it.
+    const geo = loadGeo();
+    if (geo?.city) {
+      setForm((f) => {
+        if (f.town) return f;
+        const match = townsForCounty(f.county).find((t) => t.toLowerCase() === geo.city!.toLowerCase());
+        return match ? { ...f, town: match } : f;
+      });
+    }
   }, []);
 
   if (!me) {

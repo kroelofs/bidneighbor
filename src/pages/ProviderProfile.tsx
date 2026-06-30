@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, type Category, type Me } from "../lib/api";
 import { COUNTIES, DEFAULT_COUNTY } from "../lib/geo";
 import AddressAutocomplete from "../components/AddressAutocomplete";
+import { loadGeo } from "../lib/geoConsent";
 
 export default function ProviderProfile({ me, onChange }: { me: Me | null; onChange: () => void }) {
   const [cats, setCats] = useState<Category[]>([]);
@@ -19,15 +20,18 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
   }, []);
 
   useEffect(() => {
-    if (me) setProfile({
+    if (!me) return;
+    // Saved value wins; otherwise pre-fill city/state/zip from consented edge geo.
+    const geo = loadGeo();
+    setProfile({
       name: me.name ?? "",
       phone: me.phone ?? "",
       county: me.county ?? DEFAULT_COUNTY,
       town: me.town ?? "",
       street_address: me.street_address ?? "",
-      city: me.city ?? "",
-      state: me.state ?? "",
-      zip: me.zip ?? "",
+      city: me.city ?? geo?.city ?? "",
+      state: me.state ?? geo?.state ?? "",
+      zip: me.zip ?? geo?.zip ?? "",
       provider_bio: me.provider_bio ?? "",
       latitude: me.latitude,
       longitude: me.longitude,
