@@ -25,6 +25,7 @@ export interface GoogleProfile {
   email: string;
   email_verified: boolean;
   name: string | null;
+  picture: string | null;
 }
 
 /** Exchange the authorization code and fetch the verified profile. */
@@ -48,11 +49,12 @@ export async function exchangeCode(env: Env, code: string, redirectUri: string):
     headers: { authorization: `Bearer ${token.access_token}` },
   });
   if (!infoRes.ok) return null;
-  const info = (await infoRes.json()) as { email?: string; email_verified?: boolean; name?: string };
+  const info = (await infoRes.json()) as { email?: string; email_verified?: boolean; name?: string; picture?: string };
   if (!info.email) return null;
   return {
     email: info.email.toLowerCase(),
     email_verified: info.email_verified !== false,
     name: info.name ?? null,
+    picture: info.picture ?? null,
   };
 }

@@ -10,6 +10,7 @@ export interface Me {
   town: string | null;
   county: string | null;
   provider_bio: string | null;
+  avatar_url: string | null;
   theme_preference: "light" | "dark";
   status: "active" | "suspended";
 }

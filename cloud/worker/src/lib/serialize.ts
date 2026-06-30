@@ -24,6 +24,7 @@ export function selfUser(u: UserRow) {
     town: u.town,
     county: u.county,
     provider_bio: u.provider_bio,
+    avatar_url: u.avatar_url,
     theme_preference: u.theme_preference,
     status: u.status,
   };

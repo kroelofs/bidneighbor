@@ -2,7 +2,19 @@ import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ImpersonationBanner } from "./ImpersonationBanner";
-import { api, type Me } from "../lib/api";
+import { UserMenu } from "./UserMenu";
+import { type Me } from "../lib/api";
+
+const APP_ORIGIN = "https://app.bidneighbor.com";
+
+/** Sign-in always lands on the app host. On the app host itself (or local dev) use a
+ *  relative path; anywhere else, an absolute URL to app.bidneighbor.com. */
+function loginHref(): string {
+  if (typeof window === "undefined") return "/login";
+  const h = window.location.hostname;
+  const onApp = h === "app.bidneighbor.com" || h === "localhost" || h === "127.0.0.1";
+  return onApp ? "/login" : `${APP_ORIGIN}/login`;
+}
 
 export function Layout({
   children,
@@ -13,11 +25,6 @@ export function Layout({
   me: Me | null;
   impersonating?: { by_admin_name: string | null } | null;
 }) {
-  const logout = async () => {
-    await api.post("/api/logout").catch(() => {});
-    window.location.href = "/";
-  };
-
   return (
     <div className="min-h-screen">
       {impersonating ? <ImpersonationBanner adminName={impersonating.by_admin_name} /> : null}
@@ -33,12 +40,15 @@ export function Layout({
               <>
                 <Link to="/my-tasks" className="px-2 py-1 hover:underline">My tasks</Link>
                 <Link to="/provider" className="px-2 py-1 hover:underline">Provider</Link>
-                <button onClick={logout} className="px-2 py-1 hover:underline">Sign out</button>
+                <ThemeToggle />
+                <UserMenu me={me} />
               </>
             ) : (
-              <Link to="/login" className="btn-primary !px-4 !py-2 !text-sm">Sign in</Link>
+              <>
+                <ThemeToggle />
+                <a href={loginHref()} className="btn-primary !px-4 !py-2 !text-sm">Sign in</a>
+              </>
             )}
-            <ThemeToggle />
           </nav>
         </div>
       </header>

@@ -9,7 +9,7 @@ function mkAuth(overrides: Partial<UserRow> = {}, session: Partial<Session> = {}
   const user: UserRow = {
     id: "u1", email: "a@b.com", name: null, phone: null, role: "customer",
     admin_level: null, auth_provider: "magic_link", town: null, county: null,
-    provider_bio: null, theme_preference: "light", status: "active",
+    provider_bio: null, avatar_url: null, theme_preference: "light", status: "active",
     created_at: "", updated_at: "", ...overrides,
   };
   return {

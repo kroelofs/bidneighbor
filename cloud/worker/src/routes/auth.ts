@@ -65,7 +65,7 @@ export async function googleCallback(req: Request, env: Env): Promise<Response> 
   const profile = await exchangeCode(env, code, redirectUri);
   if (!profile || !profile.email_verified) return redirect(`${savedOrigin}/login?error=google`);
 
-  const user = await findOrCreateByEmail(env, profile.email, { name: profile.name, authProvider: "google" });
+  const user = await findOrCreateByEmail(env, profile.email, { name: profile.name, authProvider: "google", avatarUrl: profile.picture });
   const { cookie } = await createSession(env, user);
   return redirect(`${savedOrigin}/`, { "set-cookie": cookie });
 }

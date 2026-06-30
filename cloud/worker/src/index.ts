@@ -6,7 +6,14 @@ import { handleQueue } from "./queue";
 export default {
   async fetch(req: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
-    const host = req.headers.get("host") || url.host;
+    const host = (req.headers.get("host") || url.host).toLowerCase();
+
+    // Canonical host: bare domain + www → the app host. Keeps one cookie domain and
+    // one set of OAuth redirect URIs (app./admin. only). 302 (not 301) while iterating.
+    if (host === "bidneighbor.com" || host === "www.bidneighbor.com") {
+      return Response.redirect(`${env.APP_BASE_URL}${url.pathname}${url.search}`, 302);
+    }
+
     const isAdminHost = host === env.ADMIN_HOST || host.startsWith("admin.");
 
     // ---- API ----
@@ -21,10 +28,16 @@ export default {
     }
 
     // ---- Static assets + SPA shells ----
-    // Try the asset first; on a miss for a navigation request, serve the right shell
-    // (admin.html on the admin host, index.html otherwise) so client-side routing works.
-    const assetRes = await env.ASSETS.fetch(req);
-    if (assetRes.status !== 404) return assetRes;
+    // Real files (have an extension, e.g. /assets/app-abc.js) come from ASSETS.
+    // Everything else is a client-side route and must get the SPA shell for THIS
+    // host — admin.html on the admin host, index.html otherwise. (The assets
+    // binding default-serves index.html at "/", so we cannot rely on it for the
+    // admin host; we pick the shell explicitly.)
+    const looksLikeFile = /\.[a-zA-Z0-9]+$/.test(url.pathname);
+    if (looksLikeFile) {
+      const assetRes = await env.ASSETS.fetch(req);
+      if (assetRes.status !== 404) return assetRes;
+    }
 
     const shellPath = isAdminHost ? "/admin.html" : "/index.html";
     const shellReq = new Request(new URL(shellPath, url.origin).toString(), { headers: req.headers });
