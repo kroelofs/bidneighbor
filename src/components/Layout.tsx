@@ -9,17 +9,7 @@ import { ModeSwitch } from "./ModeSwitch";
 import ProviderSetup from "./ProviderSetup";
 import { useMode } from "../lib/mode";
 import { type Me } from "../lib/api";
-
-const APP_ORIGIN = "https://app.bidneighbor.com";
-
-/** Sign-in always lands on the app host. On the app host itself (or local dev) use a
- *  relative path; anywhere else, an absolute URL to app.bidneighbor.com. */
-function loginHref(): string {
-  if (typeof window === "undefined") return "/login";
-  const h = window.location.hostname;
-  const onApp = h === "app.bidneighbor.com" || h === "localhost" || h === "127.0.0.1";
-  return onApp ? "/login" : `${APP_ORIGIN}/login`;
-}
+import { loginHref } from "../lib/config";
 
 /** Nav links for the signed-in user, by mode. Each lens shows only its own tools. */
 function navLinks(mode: "neighbor" | "provider"): { to: string; label: string }[] {
