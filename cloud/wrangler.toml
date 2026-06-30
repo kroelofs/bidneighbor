@@ -43,14 +43,14 @@ max_batch_size = 10
 max_retries = 3
 
 # Production routes — both hostnames hit this one Worker; it routes by Host header.
-# Uncomment once DNS records for app./admin. exist in the bidneighbor.com zone.
-# [[routes]]
-# pattern = "app.bidneighbor.com/*"
-# zone_name = "bidneighbor.com"
-#
-# [[routes]]
-# pattern = "admin.bidneighbor.com/*"
-# zone_name = "bidneighbor.com"
+# Backed by proxied CNAME records for app./admin. in the bidneighbor.com zone.
+[[routes]]
+pattern = "app.bidneighbor.com/*"
+zone_name = "bidneighbor.com"
+
+[[routes]]
+pattern = "admin.bidneighbor.com/*"
+zone_name = "bidneighbor.com"
 
 # Runtime secrets (set with `wrangler secret put <NAME>`):
 #   TURNSTILE_SECRET_KEY
