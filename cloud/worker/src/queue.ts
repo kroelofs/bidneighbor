@@ -28,7 +28,7 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
          <p><a href="${job.link}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Sign in</a></p>
          <p style="font-size:12px;color:#888">If you didn't request this, you can ignore it.</p>`,
       );
-      await sendEmail(env, job.email, "Your BidNeighbor sign-in link", html);
+      await recordAndSend(env, null, "magic_link", job.email, "Your BidNeighbor sign-in link", html);
       return;
     }
     case "task_posted": {
