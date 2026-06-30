@@ -21,6 +21,7 @@ export interface Me {
   status: "active" | "suspended";
   notify_new_tasks: number; // 0|1
   notify_responses: number; // 0|1
+  last_mode: "neighbor" | "provider" | null;
 }
 
 export interface MeResponse {

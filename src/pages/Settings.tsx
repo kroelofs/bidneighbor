@@ -66,18 +66,24 @@ export default function Settings({ me, onChange }: { me: Me | null; onChange: ()
         <div className="min-w-0 flex-1">
           <div className="card">
             <h2 className="font-semibold">Email notifications</h2>
-            <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
-              <Toggle
-                checked={newTasks}
-                onChange={(v) => { setNewTasks(v); setSaved(false); }}
-                label="New matching tasks"
-                hint="As a provider, email me when a new task is posted in my categories and area."
-              />
+
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-400">When you're getting help</p>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
               <Toggle
                 checked={responses}
                 onChange={(v) => { setResponses(v); setSaved(false); }}
-                label="Responses &amp; updates"
-                hint="Email me when someone responds to my task, or when I'm selected for a job."
+                label="Responses to my tasks"
+                hint="Email me when someone responds to a task I posted, or when I select a provider."
+              />
+            </div>
+
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">When you're doing jobs</p>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <Toggle
+                checked={newTasks}
+                onChange={(v) => { setNewTasks(v); setSaved(false); }}
+                label="New jobs near me"
+                hint="Email me when a new task is posted in my categories and area."
               />
             </div>
             {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}

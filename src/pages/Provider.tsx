@@ -15,17 +15,17 @@ export default function Provider({ me }: { me: Me | null }) {
     api.get<{ responses: MyResponse[] }>("/api/provider/responses").then((d) => setResponses(d.responses)).catch(() => {});
   }, [me]);
 
-  if (!me) return <p className="text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to use the provider dashboard.</p>;
+  if (!me) return <p className="text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to find work near you.</p>;
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Provider dashboard</h1>
+        <h1 className="text-2xl font-bold">Find work</h1>
         <Link to="/provider/profile" className="btn-secondary !py-2 text-sm">Edit profile & categories</Link>
       </div>
 
       <section className="mt-5">
-        <h2 className="font-semibold">Jobs matching your county & categories</h2>
+        <h2 className="font-semibold">Jobs matching your area & categories</h2>
         <div className="mt-3 space-y-3">
           {tasks.length === 0 ? (
             <p className="text-sm text-gray-500">No matches yet. Make sure you've set your county and picked categories in your <Link to="/provider/profile" className="text-brand-600 underline">profile</Link>.</p>
@@ -42,9 +42,9 @@ export default function Provider({ me }: { me: Me | null }) {
       </section>
 
       <section className="mt-6">
-        <h2 className="font-semibold">Your responses</h2>
+        <h2 className="font-semibold">My bids</h2>
         <div className="mt-3 space-y-3">
-          {responses.length === 0 ? <p className="text-sm text-gray-500">You haven't responded to any jobs yet.</p> : responses.map((r) => (
+          {responses.length === 0 ? <p className="text-sm text-gray-500">You haven't sent any bids yet.</p> : responses.map((r) => (
             <Link key={r.id} to={`/tasks/${r.task_id}`} className="card block hover:border-brand-500">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">{r.task_title}</h3>
