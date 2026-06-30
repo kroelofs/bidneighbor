@@ -53,9 +53,10 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
 
   // ---- Tasks ----
   if (path === "/api/tasks" && method === "GET") return tasks.listTasks(req, env);
+  if (path === "/api/my-tasks" && method === "GET") return tasks.myTasks(req, env, ctx.auth);
   if (path === "/api/tasks" && method === "POST") return tasks.createTask(req, env, ctx.auth);
   if ((m = match("/api/tasks/:id", path))) {
-    if (method === "GET") return tasks.getTask(req, env, m.id);
+    if (method === "GET") return tasks.getTask(req, env, ctx.auth, m.id);
     if (method === "PATCH") return tasks.updateTask(req, env, ctx.auth, m.id);
   }
   if ((m = match("/api/tasks/:id/files", path)) && method === "POST") return files.uploadTaskFile(req, env, ctx.auth, m.id);

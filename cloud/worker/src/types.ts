@@ -53,6 +53,7 @@ export interface UserRow {
   status: "active" | "suspended";
   notify_new_tasks: number; // 0|1 — provider "new matching task" emails
   notify_responses: number; // 0|1 — "new response" / "you were selected" emails
+  last_mode: "neighbor" | "provider" | null; // last-used UI lens; null → client default
   created_at: string;
   updated_at: string;
 }
