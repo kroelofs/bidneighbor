@@ -27,7 +27,7 @@ export function Layout({
   impersonating?: { by_admin_name: string | null } | null;
 }) {
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       {impersonating ? <ImpersonationBanner adminName={impersonating.by_admin_name} /> : null}
       <header className="border-b border-gray-200 bg-white/90 backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
@@ -53,7 +53,7 @@ export function Layout({
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">{children}</main>
       <footer className="mt-12 border-t border-gray-200 dark:border-gray-800">
         <div className="mx-auto flex max-w-4xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-gray-500 sm:flex-row">
           <p>© {new Date().getFullYear()} BidNeighbor</p>
