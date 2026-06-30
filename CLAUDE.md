@@ -51,19 +51,34 @@ docs/             — specs + planning docs
 > git worktree remove worktrees/<feature>
 > ```
 > `worktrees/` is gitignored, so the checkouts never show up as untracked files in the main tree.
-> Small single-file tweaks can skip this and use a plain branch below.
+>
+> **Decide by the working tree, not the change size.** A small single-file tweak can use the plain
+> branch flow below *only when the current tree is clean* (`git status` shows nothing unrelated). If you
+> are sitting on a branch with **uncommitted/in-progress work** and need to ship an *unrelated* fix, use a
+> worktree off `origin/main` — do **not** `git stash` + switch branches + `git stash pop` to carve the
+> change out. That cross-branch stash juggling smears the in-flight WIP into the new branch and has
+> dropped a commit onto `main` by accident. The worktree leaves your dirty branch completely untouched:
+> ```bash
+> git fetch origin
+> git worktree add worktrees/<fix> -b fix/<fix> origin/main   # clean tree based on real main
+> # edit, check, commit, push, PR, merge from inside; your other branch never moves
+> git worktree remove worktrees/<fix>
+> ```
 
 ```bash
-# 1. Branch — never commit on main
-git checkout -b feat/my-change
+# 1. Branch off REAL main — never commit on main, never inherit local drift
+git fetch origin
+git checkout -b feat/my-change origin/main
 
 # 2. Run the SAME checks CI runs, locally, first (zero errors required):
 npx tsc --noEmit        # root tsconfig covers src/ AND cloud/worker/src
 npm run build           # vite build → cloud/public
 npm test                # vitest
 
-# 3. Commit, push, open PR
+# 3. Stage ONLY the files you touched, then confirm before committing:
 git add <files>
+git branch --show-current        # MUST be feat/my-change, not main
+git diff --cached --name-only    # MUST be exactly your files, nothing else
 git commit -m "feat: description"
 git push -u origin feat/my-change
 gh pr create --title "feat: description" --body "Summary"
