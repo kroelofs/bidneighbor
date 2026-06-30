@@ -44,6 +44,8 @@ export interface UserRow {
   avatar_url: string | null;
   theme_preference: "light" | "dark";
   status: "active" | "suspended";
+  notify_new_tasks: number; // 0|1 — provider "new matching task" emails
+  notify_responses: number; // 0|1 — "new response" / "you were selected" emails
   created_at: string;
   updated_at: string;
 }

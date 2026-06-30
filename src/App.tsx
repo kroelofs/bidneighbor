@@ -11,6 +11,7 @@ import TaskDetail from "./pages/TaskDetail";
 import MyTasks from "./pages/MyTasks";
 import Provider from "./pages/Provider";
 import ProviderProfile from "./pages/ProviderProfile";
+import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import SmsPolicy from "./pages/SmsPolicy";
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/my-tasks" element={<MyTasks me={me} />} />
             <Route path="/provider" element={<Provider me={me} />} />
             <Route path="/provider/profile" element={<ProviderProfile me={me} onChange={refresh} />} />
+            <Route path="/settings" element={<Settings me={me} onChange={refresh} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/sms-policy" element={<SmsPolicy />} />

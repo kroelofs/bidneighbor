@@ -70,6 +70,11 @@ export async function updateProfile(req: Request, env: Env, auth: AuthContext | 
   if (body.theme_preference === "light" || body.theme_preference === "dark") {
     sets.push("theme_preference = ?"); binds.push(body.theme_preference);
   }
+  for (const key of ["notify_new_tasks", "notify_responses"] as const) {
+    if (typeof body[key] === "boolean" || body[key] === 0 || body[key] === 1) {
+      sets.push(`${key} = ?`); binds.push(body[key] ? 1 : 0);
+    }
+  }
   if (!sets.length) return json({ ok: true });
   sets.push("updated_at = ?"); binds.push(now());
   binds.push(auth.user.id);

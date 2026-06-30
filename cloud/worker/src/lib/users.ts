@@ -43,6 +43,8 @@ export async function findOrCreateByEmail(
     avatar_url: opts.avatarUrl ?? null,
     theme_preference: "light",
     status: "active",
+    notify_new_tasks: 1, // matches the column default; INSERT below relies on the DB default
+    notify_responses: 1,
     created_at: ts,
     updated_at: ts,
   };
