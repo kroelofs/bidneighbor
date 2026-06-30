@@ -27,6 +27,8 @@ export function selfUser(u: UserRow) {
     city: u.city,
     state: u.state,
     zip: u.zip,
+    latitude: u.latitude,
+    longitude: u.longitude,
     provider_bio: u.provider_bio,
     avatar_url: u.avatar_url,
     theme_preference: u.theme_preference,

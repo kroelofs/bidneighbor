@@ -87,6 +87,13 @@ export async function updateProfile(req: Request, env: Env, auth: AuthContext | 
       sets.push(`${key} = ?`); binds.push(body[key] ? 1 : 0);
     }
   }
+  // Geocoded coords (from address autocomplete). Only written when finite numbers are
+  // sent — a manual address entry omits them and never clobbers existing coords.
+  for (const key of ["latitude", "longitude"] as const) {
+    if (typeof body[key] === "number" && Number.isFinite(body[key] as number)) {
+      sets.push(`${key} = ?`); binds.push(body[key]);
+    }
+  }
   if (!sets.length) return json({ ok: true });
   sets.push("updated_at = ?"); binds.push(now());
   binds.push(auth.user.id);

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { sanitizeText, slugify, isEmail, toCents } from "../cloud/worker/src/lib/text";
 import { taskSlug, taskIdFilter } from "../cloud/worker/src/lib/taskref";
 import { match } from "../cloud/worker/src/lib/match";
+import { parseSuggestions, parsePlaceDetails } from "../cloud/worker/src/lib/places";
 import { sign, unsign } from "../cloud/worker/src/lib/crypto";
 import { isAdmin, canImpersonate } from "../cloud/worker/src/lib/guards";
 import type { AuthContext, UserRow, Session } from "../cloud/worker/src/types";
@@ -83,6 +84,54 @@ describe("router match", () => {
   });
   it("rejects different static segment", () => {
     expect(match("/api/tasks/:id", "/api/users/abc")).toBeNull();
+  });
+});
+
+describe("google places parsing", () => {
+  it("flattens autocomplete suggestions, dropping malformed entries", () => {
+    const body = {
+      suggestions: [
+        { placePrediction: { placeId: "p1", text: { text: "123 Main St, Sioux Center, IA, USA" } } },
+        { placePrediction: { placeId: "p2" } }, // no text -> dropped
+        { queryPrediction: {} }, // not a place -> dropped
+      ],
+    };
+    expect(parseSuggestions(body)).toEqual([{ placeId: "p1", description: "123 Main St, Sioux Center, IA, USA" }]);
+  });
+
+  it("returns [] when there are no suggestions", () => {
+    expect(parseSuggestions({})).toEqual([]);
+  });
+
+  it("maps place details to structured address + coords (state as short code)", () => {
+    const addr = parsePlaceDetails({
+      formattedAddress: "123 Main St, Sioux Center, IA 51250, USA",
+      location: { latitude: 43.0776, longitude: -96.1758 },
+      addressComponents: [
+        { longText: "123", shortText: "123", types: ["street_number"] },
+        { longText: "Main Street", shortText: "Main St", types: ["route"] },
+        { longText: "Sioux Center", shortText: "Sioux Center", types: ["locality", "political"] },
+        { longText: "Iowa", shortText: "IA", types: ["administrative_area_level_1", "political"] },
+        { longText: "51250", shortText: "51250", types: ["postal_code"] },
+      ],
+    });
+    expect(addr).toEqual({
+      street_address: "123 Main Street",
+      city: "Sioux Center",
+      state: "IA",
+      zip: "51250",
+      latitude: 43.0776,
+      longitude: -96.1758,
+      formatted: "123 Main St, Sioux Center, IA 51250, USA",
+    });
+  });
+
+  it("tolerates missing components and missing coordinates", () => {
+    const addr = parsePlaceDetails({ addressComponents: [{ longText: "Hawarden", types: ["locality"] }] });
+    expect(addr.city).toBe("Hawarden");
+    expect(addr.street_address).toBe("");
+    expect(addr.latitude).toBeNull();
+    expect(addr.longitude).toBeNull();
   });
 });
 

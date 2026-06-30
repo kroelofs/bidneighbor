@@ -546,7 +546,14 @@ EMAIL_FROM = "no-reply@bidneighbor.com"
 
 ### Secrets (`wrangler secret put`)
 `TURNSTILE_SECRET_KEY`, `EMAIL_API_KEY` (Resend), `GOOGLE_OAUTH_CLIENT_ID`,
-`GOOGLE_OAUTH_CLIENT_SECRET`, `SESSION_SIGNING_KEY`.
+`GOOGLE_OAUTH_CLIENT_SECRET`, `SESSION_SIGNING_KEY`, `GOOGLE_PLACES_API_KEY`.
+
+`GOOGLE_PLACES_API_KEY` powers address autocomplete (`/api/places/*`, a server-side
+proxy to the **Places API (New)** so the key never reaches the browser). Create it in a
+billing-enabled Google Cloud project with the *Places API (New)* enabled, restrict the key
+to that API, then `cd cloud && npx wrangler secret put GOOGLE_PLACES_API_KEY` (and add it to
+`cloud/.dev.vars` for `wrangler dev`). The proxy requires a signed-in session and is
+KV-rate-limited per user. If unset, address fields fall back to manual entry (no autocomplete).
 
 ### Local tooling `.env`
 Already present (gitignored). Holds Cloudflare account id + API token, GitHub token, and AI

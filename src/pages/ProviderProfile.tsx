@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Category, type Me } from "../lib/api";
 import { COUNTIES, DEFAULT_COUNTY } from "../lib/geo";
+import AddressAutocomplete from "../components/AddressAutocomplete";
 import { loadGeo } from "../lib/geoConsent";
 
 export default function ProviderProfile({ me, onChange }: { me: Me | null; onChange: () => void }) {
   const [cats, setCats] = useState<Category[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [profile, setProfile] = useState({ name: "", phone: "", county: DEFAULT_COUNTY, town: "", street_address: "", city: "", state: "", zip: "", provider_bio: "" });
+  const [profile, setProfile] = useState({
+    name: "", phone: "", county: DEFAULT_COUNTY, town: "", street_address: "", city: "", state: "", zip: "", provider_bio: "",
+    latitude: null as number | null, longitude: null as number | null,
+  });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -29,6 +33,8 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
       state: me.state ?? geo?.state ?? "",
       zip: me.zip ?? geo?.zip ?? "",
       provider_bio: me.provider_bio ?? "",
+      latitude: me.latitude,
+      longitude: me.longitude,
     });
   }, [me]);
 
@@ -69,6 +75,10 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
           </div>
           <div><label className="label">Town</label><input className="input" value={profile.town} onChange={(e) => setProfile({ ...profile, town: e.target.value })} /></div>
         </div>
+        <AddressAutocomplete
+          label="Search your address (autofill)"
+          onSelect={(a) => setProfile({ ...profile, ...a })}
+        />
         <div>
           <label className="label">Street address (private)</label>
           <input className="input" value={profile.street_address} onChange={(e) => setProfile({ ...profile, street_address: e.target.value })} placeholder="123 Main St" />

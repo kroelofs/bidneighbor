@@ -19,6 +19,9 @@ cloud/public/
 .vite/
 node_modules/.vite/
 
+# Git worktrees — standard dev location (one subfolder per feature branch)
+/worktrees/
+
 # Editor / OS
 .DS_Store
 *.local

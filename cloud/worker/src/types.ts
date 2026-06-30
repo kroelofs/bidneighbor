@@ -20,6 +20,7 @@ export interface Env {
   EMAIL_API_KEY?: string;
   GOOGLE_OAUTH_CLIENT_ID?: string;
   GOOGLE_OAUTH_CLIENT_SECRET?: string;
+  GOOGLE_PLACES_API_KEY?: string;
   SESSION_SIGNING_KEY?: string;
 
   // Injected at build/deploy time (see deploy.yml)
@@ -44,6 +45,8 @@ export interface UserRow {
   city: string | null;
   state: string | null;
   zip: string | null;
+  latitude: number | null;
+  longitude: number | null;
   provider_bio: string | null;
   avatar_url: string | null;
   theme_preference: "light" | "dark";
