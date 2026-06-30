@@ -65,7 +65,7 @@ export default function TaskDetail({ me }: { me: Me | null }) {
       {params.get("posted") ? (
         <div className="card mb-4 border-green-300 bg-green-50 dark:bg-green-900/20">
           <p className="font-medium">Your task is live! Share this link:</p>
-          <code className="text-sm break-all">{window.location.origin}/tasks/{task.id}</code>
+          <code className="text-sm break-all">{task.share_url}</code>
         </div>
       ) : null}
 

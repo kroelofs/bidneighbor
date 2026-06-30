@@ -23,8 +23,10 @@ interface TaskRow {
   updated_at: string;
 }
 
-/** Public-safe task shape — no customer contact info. */
-function publicTask(t: TaskRow & { category_name?: string }) {
+/** Public-safe task shape — no customer contact info.
+ *  `share_url` is always built from APP_BASE_URL so links shared from any host
+ *  (including admin.bidneighbor.com) point at the public app host. */
+function publicTask(t: TaskRow & { category_name?: string }, appBase: string) {
   return {
     id: t.id,
     title: t.title,
@@ -38,6 +40,7 @@ function publicTask(t: TaskRow & { category_name?: string }) {
     timeframe: t.timeframe,
     status: t.status,
     created_at: t.created_at,
+    share_url: `${appBase}/tasks/${t.id}`,
   };
 }
 
@@ -59,7 +62,7 @@ export async function listTasks(req: Request, env: Env): Promise<Response> {
      LEFT JOIN categories c ON c.id = t.category_id
      WHERE ${where.join(" AND ")} ORDER BY t.created_at DESC LIMIT 100`,
   ).bind(...binds).all<TaskRow & { category_name: string }>();
-  return json({ tasks: (results ?? []).map(publicTask) });
+  return json({ tasks: (results ?? []).map((t) => publicTask(t, env.APP_BASE_URL)) });
 }
 
 /** POST /api/tasks — customer creates a task. */
@@ -105,7 +108,7 @@ export async function getTask(_req: Request, env: Env, id: string): Promise<Resp
   const files = await env.DB.prepare(
     "SELECT id, filename, content_type FROM task_files WHERE task_id = ? ORDER BY created_at",
   ).bind(id).all();
-  return json({ task: publicTask(task), files: files.results ?? [] });
+  return json({ task: publicTask(task, env.APP_BASE_URL), files: files.results ?? [] });
 }
 
 /** PATCH /api/tasks/:id — owner only (edit / close / cancel). */

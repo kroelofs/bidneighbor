@@ -99,7 +99,10 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Budget (optional)</label>
-            <input className="input" inputMode="decimal" value={form.budget} onChange={(e) => set("budget", e.target.value)} placeholder="$" />
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <input className="input pl-7" inputMode="decimal" value={form.budget} onChange={(e) => set("budget", e.target.value)} placeholder="0" />
+            </div>
           </div>
           <div>
             <label className="label">Timeframe</label>
