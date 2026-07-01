@@ -48,7 +48,10 @@ export default function AddressOnboarding({ me, onSaved }: { me: Me | null; onSa
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ready) return;
+    if (!ready) {
+      setErr("Please fill in your street address, city, state, and ZIP.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -84,7 +87,7 @@ export default function AddressOnboarding({ me, onSaved }: { me: Me | null; onSa
           </div>
           {err && <p className="text-sm text-red-600">{err}</p>}
           <div className="flex items-center gap-3 pt-1">
-            <button type="submit" className="btn-primary flex-1 disabled:opacity-60" disabled={busy || !ready}>
+            <button type="submit" className="btn-primary flex-1 disabled:opacity-60" disabled={busy}>
               {busy ? "Saving…" : "Save address"}
             </button>
             <button type="button" className="px-3 py-2 text-sm text-gray-500 hover:underline" onClick={skip}>
