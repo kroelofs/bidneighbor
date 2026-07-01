@@ -118,6 +118,7 @@ export function Layout({
             <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
             <Link to="/terms" className="hover:underline">Terms of Service</Link>
             <Link to="/sms-policy" className="hover:underline">SMS Policy</Link>
+            <Link to="/liability" className="hover:underline">Liability Policy</Link>
           </nav>
         </div>
       </footer>

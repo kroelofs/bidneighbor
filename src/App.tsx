@@ -18,6 +18,7 @@ import Providers from "./pages/Providers";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import SmsPolicy from "./pages/SmsPolicy";
+import Liability from "./pages/Liability";
 
 export default function App() {
   const { me, impersonating, loading, refresh } = useMe();
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/sms-policy" element={<SmsPolicy />} />
+              <Route path="/liability" element={<Liability />} />
               <Route path="*" element={<p className="py-12 text-center">Page not found.</p>} />
             </Routes>
           )}
