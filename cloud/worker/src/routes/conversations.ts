@@ -13,6 +13,21 @@ import {
   type SubjectType,
 } from "../lib/conversations";
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+// Images only for chat attachments. Magic-byte prefixes guard against spoofed types.
+const ALLOWED_IMAGES = new Map<string, number[]>([
+  ["image/jpeg", [0xff, 0xd8, 0xff]],
+  ["image/png", [0x89, 0x50, 0x4e, 0x47]],
+  ["image/webp", [0x52, 0x49, 0x46, 0x46]], // RIFF (WEBP container)
+  ["image/gif", [0x47, 0x49, 0x46, 0x38]], // GIF8
+]);
+function imageMagicOk(contentType: string, bytes: Uint8Array): boolean {
+  const sig = ALLOWED_IMAGES.get(contentType);
+  if (!sig) return false;
+  for (let i = 0; i < sig.length; i++) if (bytes[i] !== sig[i]) return false;
+  return true;
+}
+
 /** GET /api/conversations — my inbox (either role), newest activity first, with unread counts. */
 export async function listConversations(_req: Request, env: Env, auth: AuthContext | null): Promise<Response> {
   if (!auth) return unauthorized();
@@ -134,6 +149,17 @@ export async function listMessages(_req: Request, env: Env, auth: AuthContext | 
 
   await markConversationRead(env, id, auth.user.id);
 
+  // Attachments, batched by message so we don't N+1 the thread.
+  const filesByMessage = new Map<string, { id: string; content_type: string }[]>();
+  const { results: fileRows } = await env.DB.prepare(
+    "SELECT id, message_id, content_type FROM message_files WHERE conversation_id = ?",
+  ).bind(id).all<{ id: string; message_id: string; content_type: string }>();
+  for (const f of fileRows ?? []) {
+    const list = filesByMessage.get(f.message_id) ?? [];
+    list.push({ id: f.id, content_type: f.content_type });
+    filesByMessage.set(f.message_id, list);
+  }
+
   // For a task thread, surface the bidder's original response (message + quote) so the
   // conversation opens with the context it grew out of.
   const context = await threadContext(env, conv);
@@ -153,6 +179,7 @@ export async function listMessages(_req: Request, env: Env, auth: AuthContext | 
       sender_id: m.sender_id,
       mine: m.sender_id === auth.user.id,
       body: m.body,
+      files: filesByMessage.get(m.id) ?? [],
       created_at: m.created_at,
     })),
   });
@@ -218,4 +245,70 @@ export async function markRead(_req: Request, env: Env, auth: AuthContext | null
   if (!isParticipant(conv, auth.user.id)) return forbidden();
   await markConversationRead(env, id, auth.user.id);
   return json({ ok: true });
+}
+
+/**
+ * POST /api/conversations/:id/files — participants only. Sends an image as a message
+ * (with an optional text caption). multipart/form-data with `file` and optional `body`.
+ */
+export async function sendImage(req: Request, env: Env, auth: AuthContext | null, id: string): Promise<Response> {
+  if (!auth) return unauthorized();
+  if (isSuspended(auth)) return forbidden();
+  const conv = await getConversation(env, id);
+  if (!conv || conv.status !== "active") return notFound();
+  if (!isParticipant(conv, auth.user.id)) return forbidden();
+
+  const form = await req.formData();
+  const entry = form.get("file");
+  if (!entry || typeof entry === "string") return badRequest("No image");
+  const file = entry as { size: number; type: string; name: string; arrayBuffer(): Promise<ArrayBuffer> };
+  if (file.size > MAX_IMAGE_BYTES) return badRequest("Image too large (max 10 MB)");
+  const buf = new Uint8Array(await file.arrayBuffer());
+  if (!imageMagicOk(file.type, buf)) return badRequest("Only JPG, PNG, WebP, or GIF images are allowed");
+
+  const rl = await rateLimit(env, `msg:${auth.user.id}`, 30, 60);
+  if (!rl.ok) return error(429, "You're sending messages too fast — try again in a moment");
+
+  const caption = sanitizeText(form.get("body"), 2000);
+  const msgId = uuid();
+  const fileId = uuid();
+  const ts = now();
+  const r2Key = `messages/${id}/${fileId}`;
+  await env.TASK_UPLOADS.put(r2Key, buf, { httpMetadata: { contentType: file.type } });
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO messages (id, conversation_id, sender_id, body, created_at) VALUES (?, ?, ?, ?, ?)",
+    ).bind(msgId, id, auth.user.id, caption, ts),
+    env.DB.prepare(
+      "INSERT INTO message_files (id, message_id, conversation_id, r2_key, content_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).bind(fileId, msgId, id, r2Key, file.type, file.size, ts),
+    env.DB.prepare(
+      "UPDATE conversations SET last_message_at = ?, updated_at = ? WHERE id = ?",
+    ).bind(ts, ts, id),
+    env.DB.prepare(
+      `INSERT INTO conversation_reads (conversation_id, user_id, last_read_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(conversation_id, user_id) DO UPDATE SET last_read_at = excluded.last_read_at`,
+    ).bind(id, auth.user.id, ts),
+  ]);
+  await env.NOTIFICATION_QUEUE.send({ type: "message_received", message_id: msgId });
+  return json({ id: msgId, file_id: fileId });
+}
+
+/** GET /api/conversations/:cid/files/:fid — stream a private attachment; participants only. */
+export async function serveFile(_req: Request, env: Env, auth: AuthContext | null, cid: string, fid: string): Promise<Response> {
+  if (!auth) return unauthorized();
+  const conv = await getConversation(env, cid);
+  if (!conv) return notFound();
+  if (!isParticipant(conv, auth.user.id)) return forbidden();
+  const row = await env.DB.prepare(
+    "SELECT r2_key, content_type FROM message_files WHERE id = ? AND conversation_id = ?",
+  ).bind(fid, cid).first<{ r2_key: string; content_type: string }>();
+  if (!row) return notFound();
+  const obj = await env.TASK_UPLOADS.get(row.r2_key);
+  if (!obj) return notFound();
+  return new Response(obj.body, {
+    // Private: an attachment is only viewable by the two participants, so never shared-cache it.
+    headers: { "content-type": row.content_type, "cache-control": "private, max-age=86400" },
+  });
 }
