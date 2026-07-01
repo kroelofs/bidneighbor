@@ -14,6 +14,7 @@ export default function PostResource({ me }: { me: Me | null }) {
   const [town, setTown] = useState(me?.town ?? "");
   const [county, setCounty] = useState(me?.county ?? "");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [agreed, setAgreed] = useState(editing); // existing listing already accepted
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,8 +86,18 @@ export default function PostResource({ me }: { me: Me | null }) {
             onChange={(e) => setPhotos(Array.from(e.target.files ?? []))} className="mt-1 text-sm" />
           {photos.length ? <p className="mt-1 text-xs text-gray-500">{photos.length} photo{photos.length > 1 ? "s" : ""} selected</p> : null}
         </div>
+        {!editing ? (
+          <label className="flex items-start gap-2 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-800">
+            <input type="checkbox" className="mt-1 shrink-0" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <span>
+              I understand BidNeighbor only connects neighbors and is <strong>not responsible</strong> for any damage,
+              injury, loss, or dispute arising from renting out my equipment. I agree to the{" "}
+              <Link to="/liability" target="_blank" className="text-brand-600 underline">Liability Policy</Link>.
+            </span>
+          </label>
+        ) : null}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button className="btn-primary disabled:opacity-60" disabled={busy}>
+        <button className="btn-primary disabled:opacity-60" disabled={busy || !agreed}>
           {busy ? "Saving…" : editing ? "Save changes" : "Post listing"}
         </button>
       </form>
