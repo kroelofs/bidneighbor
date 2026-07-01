@@ -6,6 +6,7 @@ import * as auth from "./routes/auth";
 import * as categories from "./routes/categories";
 import * as tasks from "./routes/tasks";
 import * as responses from "./routes/responses";
+import * as conversations from "./routes/conversations";
 import * as files from "./routes/files";
 import * as provider from "./routes/provider";
 import * as places from "./routes/places";
@@ -71,6 +72,15 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
 
   // ---- Responses ----
   if ((m = match("/api/responses/:id", path)) && method === "PATCH") return responses.updateResponse(req, env, ctx.auth, m.id);
+
+  // ---- Private conversations (poster <-> one counterpart; participants only) ----
+  if (path === "/api/conversations" && method === "GET") return conversations.listConversations(req, env, ctx.auth);
+  if (path === "/api/conversations" && method === "POST") return conversations.startConversation(req, env, ctx.auth);
+  if ((m = match("/api/conversations/:id/messages", path))) {
+    if (method === "GET") return conversations.listMessages(req, env, ctx.auth, m.id);
+    if (method === "POST") return conversations.postMessage(req, env, ctx.auth, m.id);
+  }
+  if ((m = match("/api/conversations/:id/read", path)) && method === "POST") return conversations.markRead(req, env, ctx.auth, m.id);
 
   // ---- Provider ----
   if (path === "/api/provider/tasks" && method === "GET") return provider.providerTasks(req, env, ctx.auth);

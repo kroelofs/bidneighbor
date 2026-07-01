@@ -35,6 +35,7 @@ export function selfUser(u: UserRow) {
     status: u.status,
     notify_new_tasks: u.notify_new_tasks,
     notify_responses: u.notify_responses,
+    notify_messages: u.notify_messages,
     last_mode: u.last_mode,
   };
 }
