@@ -4,6 +4,7 @@ import { resolveSession } from "./lib/session";
 import { handleQueue } from "./queue";
 import { handleScheduled } from "./cron";
 import { injectTaskOg } from "./lib/og";
+import { isCountryAllowed, geoBlockResponse } from "./lib/geogate";
 
 export default {
   async fetch(req: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -17,6 +18,15 @@ export default {
     }
 
     const isAdminHost = host === env.ADMIN_HOST || host.startsWith("admin.");
+
+    // ---- US-only geo gate (app product surface only) ----
+    // The app host is United-States-only. The admin host stays open for travelling
+    // admins and /api/_health stays open for uptime monitors. The bare domain already
+    // 302-redirected above, so the only surface left to gate is the app host. Fail-open
+    // on unknown country (e.g. local dev). See lib/geogate.ts.
+    if (!isAdminHost && url.pathname !== "/api/_health" && !isCountryAllowed(req)) {
+      return geoBlockResponse();
+    }
 
     // ---- API ----
     if (url.pathname.startsWith("/api/")) {
