@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Me } from "../lib/api";
+import { ADMIN_ORIGIN } from "../lib/config";
 
 function initials(me: Me): string {
   const base = (me.name || me.email || "?").trim();
@@ -73,6 +74,16 @@ export function UserMenu({ me }: { me: Me }) {
           >
             Settings
           </Link>
+          {me.admin_level !== null ? (
+            <a
+              href={ADMIN_ORIGIN}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block border-t border-gray-100 px-4 py-2.5 text-sm font-medium text-brand-600 hover:bg-gray-50 dark:border-gray-800 dark:text-brand-400 dark:hover:bg-gray-800"
+            >
+              Admin
+            </a>
+          ) : null}
           <button
             role="menuitem"
             onClick={logout}
