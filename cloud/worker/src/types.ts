@@ -22,6 +22,7 @@ export interface Env {
   GOOGLE_OAUTH_CLIENT_SECRET?: string;
   GOOGLE_PLACES_API_KEY?: string;
   SESSION_SIGNING_KEY?: string;
+  ANTHROPIC_API_KEY?: string; // Claude API — async resource content moderation (ai.ts)
 
   // Injected at build/deploy time (see deploy.yml)
   GIT_SHA?: string;
@@ -82,4 +83,5 @@ export type NotificationJob =
   | { type: "response_received"; task_id: string; response_id: string }
   | { type: "response_selected"; task_id: string; response_id: string }
   | { type: "message_received"; message_id: string }
+  | { type: "moderate_resource"; resource_id: string }
   | { type: "magic_link"; email: string; link: string };

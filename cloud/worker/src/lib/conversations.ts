@@ -9,8 +9,8 @@ import { uuid, now } from "./http";
  * bidder's thread.
  */
 
-/** Subject types a conversation may hang off. Add 'resource' when that sprint lands. */
-export const SUBJECT_TYPES = ["task"] as const;
+/** Subject types a conversation may hang off. */
+export const SUBJECT_TYPES = ["task", "resource"] as const;
 export type SubjectType = (typeof SUBJECT_TYPES)[number];
 
 export function isSubjectType(v: unknown): v is SubjectType {
@@ -54,7 +54,12 @@ export async function resolveSubjectOwner(
     ).bind(subjectId).first<{ owner_id: string }>();
     return row?.owner_id ?? null;
   }
-  // 'resource' is added when the Resources sprint ships the table.
+  if (subjectType === "resource") {
+    const row = await env.DB.prepare(
+      "SELECT owner_id FROM resources WHERE id = ? AND status NOT IN ('hidden', 'removed')",
+    ).bind(subjectId).first<{ owner_id: string }>();
+    return row?.owner_id ?? null;
+  }
   return null;
 }
 
