@@ -120,3 +120,101 @@ export async function moderateContent(env: Env, text: string): Promise<Moderatio
     categories: Array.isArray(parsed.categories) ? (parsed.categories as string[]) : undefined,
   };
 }
+
+// ---- Draft a rental listing from a photo (vision) ----
+
+export interface ResourceDraft {
+  title?: string;
+  description?: string;
+  daily_rate?: number; // USD
+}
+
+const DRAFT_TOOL = {
+  type: "function",
+  function: {
+    name: "draft_listing",
+    description: "Draft a rental listing from a photo of a piece of equipment.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short name of the item, e.g. 'Gas pressure washer'" },
+        description: {
+          type: "string",
+          description: "2-4 sentences: what it is, what it's good for, and any condition/features visible in the photo",
+        },
+        daily_rate: { type: "number", description: "A reasonable estimated daily rental rate in US dollars" },
+      },
+      required: ["title", "description", "daily_rate"],
+      additionalProperties: false,
+    },
+  },
+} as const;
+
+/**
+ * Uses a vision-capable OpenRouter model to suggest listing fields from an equipment photo.
+ * Runs on the request path (the user waits), so keep it snappy. Returns null when the key is
+ * absent or on any error — the caller surfaces a friendly "try again / fill manually" message.
+ */
+export async function draftResourceFromImage(env: Env, imageDataUrl: string): Promise<ResourceDraft | null> {
+  if (!env.OPENROUTER_API_KEY) return null;
+
+  let res: Response;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        "content-type": "application/json",
+        "HTTP-Referer": env.APP_BASE_URL ?? "https://app.bidneighbor.com",
+        "X-Title": "BidNeighbor",
+      },
+      body: JSON.stringify({
+        model: MODEL, // openai/gpt-4o-mini is vision-capable
+        max_tokens: 500,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You help a neighbor list a piece of equipment for rent from a photo. Identify the item and write a helpful, honest listing. Estimate a fair daily rental rate in USD. If the photo clearly isn't rentable equipment, still return your best guess.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Draft a rental listing for the equipment in this photo." },
+              { type: "image_url", image_url: { url: imageDataUrl } },
+            ],
+          },
+        ],
+        tools: [DRAFT_TOOL],
+        tool_choice: { type: "function", function: { name: "draft_listing" } },
+      }),
+    });
+  } catch (err) {
+    console.error("[ai] draft request failed", err);
+    return null;
+  }
+
+  if (!res.ok) {
+    console.error("[ai] draft HTTP", res.status, await res.text().catch(() => ""));
+    return null;
+  }
+
+  const data = (await res.json().catch(() => null)) as {
+    choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
+  } | null;
+  const raw =
+    data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ??
+    data?.choices?.[0]?.message?.content;
+  if (!raw) return null;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  return {
+    title: typeof parsed.title === "string" ? parsed.title : undefined,
+    description: typeof parsed.description === "string" ? parsed.description : undefined,
+    daily_rate: typeof parsed.daily_rate === "number" ? parsed.daily_rate : undefined,
+  };
+}

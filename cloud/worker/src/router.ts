@@ -86,6 +86,7 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
   // ---- Neighborhood Resources (equipment listings; browse public, mutations session-gated) ----
   if (path === "/api/resources" && method === "GET") return resources.listResources(req, env);
   if (path === "/api/resources" && method === "POST") return resources.createResource(req, env, ctx.auth);
+  if (path === "/api/resources/draft" && method === "POST") return resources.draftResource(req, env, ctx.auth);
   if ((m = match("/api/resources/:rid/files/:fid", path)) && method === "GET") return resources.serveResourceFile(req, env, m.rid, m.fid);
   if ((m = match("/api/resources/:id/files", path)) && method === "POST") return resources.uploadResourceFile(req, env, ctx.auth, m.id);
   if ((m = match("/api/resources/:id/report", path)) && method === "POST") return resources.reportResource(req, env, ctx.auth, m.id);
