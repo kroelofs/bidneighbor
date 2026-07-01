@@ -134,14 +134,20 @@ export async function listMessages(_req: Request, env: Env, auth: AuthContext | 
 
   await markConversationRead(env, id, auth.user.id);
 
+  // For a task thread, surface the bidder's original response (message + quote) so the
+  // conversation opens with the context it grew out of.
+  const context = await threadContext(env, conv);
+
   return json({
     conversation: {
       id: conv.id,
       subject_type: conv.subject_type,
       subject_id: conv.subject_id,
+      subject_title: context?.subject_title ?? null,
       owner_id: conv.owner_id,
       initiator_id: conv.initiator_id,
     },
+    context: context?.response ?? null,
     messages: (results ?? []).map((m) => ({
       id: m.id,
       sender_id: m.sender_id,
@@ -150,6 +156,23 @@ export async function listMessages(_req: Request, env: Env, auth: AuthContext | 
       created_at: m.created_at,
     })),
   });
+}
+
+/**
+ * The origin of a thread — for a task, the bidder's response (message + quote) plus the
+ * task title. Shown pinned at the top of the thread. Null for subjects without a response.
+ */
+async function threadContext(
+  env: Env,
+  conv: { subject_type: string; subject_id: string; initiator_id: string },
+): Promise<{ subject_title: string | null; response: { message: string; quote_cents: number | null; created_at: string } | null } | null> {
+  if (conv.subject_type !== "task") return null;
+  const task = await env.DB.prepare("SELECT title FROM tasks WHERE id = ?")
+    .bind(conv.subject_id).first<{ title: string }>();
+  const response = await env.DB.prepare(
+    "SELECT message, quote_cents, created_at FROM responses WHERE task_id = ? AND provider_id = ? ORDER BY created_at DESC LIMIT 1",
+  ).bind(conv.subject_id, conv.initiator_id).first<{ message: string; quote_cents: number | null; created_at: string }>();
+  return { subject_title: task?.title ?? null, response: response ?? null };
 }
 
 /** POST /api/conversations/:id/messages — participants only. */
