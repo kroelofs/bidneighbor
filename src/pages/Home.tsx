@@ -102,9 +102,9 @@ function NeighborHome({ me }: { me: Me }) {
   );
 }
 
-export default function Home({ me }: { me: Me | null }) {
+export default function Home({ me, onChange }: { me: Me | null; onChange: () => void }) {
   const { mode } = useMode();
   if (!me) return <SplitHero />;
-  if (mode === "provider") return <Provider me={me} />;
+  if (mode === "provider") return <Provider me={me} onChange={onChange} />;
   return <NeighborHome me={me} />;
 }

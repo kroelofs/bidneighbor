@@ -4,10 +4,11 @@ import { api, type Category, type Me } from "../lib/api";
 import { COUNTIES, DEFAULT_COUNTY, townsForCounty } from "../lib/geo";
 import { loadGeo } from "../lib/geoConsent";
 import { Turnstile } from "../components/Turnstile";
+import AddressOnboarding from "../components/AddressOnboarding";
 
 const MAX_IMAGES = 4;
 
-export default function PostTask({ me }: { me: Me | null; onChange: () => void }) {
+export default function PostTask({ me, onChange }: { me: Me | null; onChange: () => void }) {
   const nav = useNavigate();
   const [cats, setCats] = useState<Category[]>([]);
   const [form, setForm] = useState({
@@ -72,6 +73,7 @@ export default function PostTask({ me }: { me: Me | null; onChange: () => void }
 
   return (
     <div className="mx-auto max-w-xl">
+      <AddressOnboarding me={me} onSaved={onChange} />
       <h1 className="text-2xl font-bold">Post a task</h1>
       <form onSubmit={submit} className="mt-4 space-y-4">
         <div>

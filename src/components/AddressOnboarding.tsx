@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, type Me } from "../lib/api";
+import { useMode } from "../lib/mode";
 import AddressAutocomplete, { type AddressFields } from "./AddressAutocomplete";
 
 const DISMISS_KEY = "bn_address_prompt_dismissed";
@@ -7,11 +8,16 @@ const DISMISS_KEY = "bn_address_prompt_dismissed";
 const EMPTY: AddressFields = { street_address: "", city: "", state: "", zip: "", latitude: null, longitude: null };
 
 /**
- * One-time, dismissible prompt shown after sign-in to any user who has no street
- * address on file. Optional — "Not now" stores a local flag so we don't nag on
- * every load. Saving fills the same user.address fields the provider profile uses.
+ * One-time, dismissible prompt shown to a logged-in user who has no street address
+ * on file. Mounted contextually (the "Post a task" flow and the provider dashboard),
+ * not app-wide, so it only asks when an address is actually useful. Optional — "Not
+ * now" stores a local flag so we don't nag on every load. Copy is tailored to the
+ * current UI lens: "neighbor" (get help) speaks about nearby providers, "provider"
+ * (do jobs) speaks about nearby jobs. Saving fills the same user.address fields the
+ * provider profile uses.
  */
 export default function AddressOnboarding({ me, onSaved }: { me: Me | null; onSaved: () => void }) {
+  const { mode } = useMode();
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(DISMISS_KEY) === "1";
@@ -61,8 +67,9 @@ export default function AddressOnboarding({ me, onSaved }: { me: Me | null; onSa
       <div className="card w-full max-w-md bg-white p-6 dark:bg-gray-900">
         <h2 className="text-xl font-bold">Add your address</h2>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          We use it to match you with nearby tasks and providers. Your street address stays private — public
-          listings show only your city, state, and ZIP.
+          {mode === "provider"
+            ? "We use it to match you with nearby jobs. Your street address stays private — customers only ever see your city, state, and ZIP."
+            : "We use it to match you with nearby providers. Your street address stays private — public listings show only your city, state, and ZIP."}
         </p>
         <form onSubmit={save} className="mt-4 space-y-3">
           <AddressAutocomplete onSelect={(a) => setAddr(a)} />
