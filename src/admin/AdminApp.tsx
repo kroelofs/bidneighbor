@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import AdminTasks from "./pages/AdminTasks";
+import AdminResources from "./pages/AdminResources";
 import AuditLog from "./pages/AuditLog";
 import Integrations from "./pages/Integrations";
 
@@ -30,6 +31,7 @@ export default function AdminApp() {
               <NavLink to="/" end className={({ isActive }) => `${navItem} ${isActive ? active : idle}`}>Dashboard</NavLink>
               <NavLink to="/users" className={({ isActive }) => `${navItem} ${isActive ? active : idle}`}>Users</NavLink>
               <NavLink to="/tasks" className={({ isActive }) => `${navItem} ${isActive ? active : idle}`}>Tasks</NavLink>
+              <NavLink to="/resources" className={({ isActive }) => `${navItem} ${isActive ? active : idle}`}>Resources</NavLink>
               <NavLink to="/integrations" className={({ isActive }) => `${navItem} ${isActive ? active : idle}`}>Integrations</NavLink>
               <NavLink to="/audit" className={({ isActive }) => `${navItem} ${isActive ? active : idle}`}>Audit</NavLink>
               <ThemeToggle />
@@ -52,6 +54,7 @@ export default function AdminApp() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/users" element={<Users me={me} />} />
               <Route path="/tasks" element={<AdminTasks />} />
+              <Route path="/resources" element={<AdminResources />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/audit" element={<AuditLog />} />
             </Routes>
