@@ -28,6 +28,7 @@ export default function Settings({ me, onChange }: { me: Me | null; onChange: ()
   const [tab] = useState<Tab>("notifications");
   const [newTasks, setNewTasks] = useState(!!me?.notify_new_tasks);
   const [responses, setResponses] = useState(!!me?.notify_responses);
+  const [messages, setMessages] = useState(me?.notify_messages !== 0);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export default function Settings({ me, onChange }: { me: Me | null; onChange: ()
   const save = async () => {
     setBusy(true); setError(null); setSaved(false);
     try {
-      await api.patch("/api/me", { notify_new_tasks: newTasks, notify_responses: responses });
+      await api.patch("/api/me", { notify_new_tasks: newTasks, notify_responses: responses, notify_messages: messages });
       setSaved(true);
       onChange();
     } catch (err) {
@@ -74,6 +75,16 @@ export default function Settings({ me, onChange }: { me: Me | null; onChange: ()
                 onChange={(v) => { setResponses(v); setSaved(false); }}
                 label="Responses to my tasks"
                 hint="Email me when someone responds to a task I posted, or when I select a provider."
+              />
+            </div>
+
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Private messages</p>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <Toggle
+                checked={messages}
+                onChange={(v) => { setMessages(v); setSaved(false); }}
+                label="New private messages"
+                hint="Email me when someone sends me a private message about a task."
               />
             </div>
 

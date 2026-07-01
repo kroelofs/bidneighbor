@@ -13,6 +13,7 @@ import MyTasks from "./pages/MyTasks";
 import Provider from "./pages/Provider";
 import ProviderProfile from "./pages/ProviderProfile";
 import Settings from "./pages/Settings";
+import Messages from "./pages/Messages";
 import Providers from "./pages/Providers";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -45,6 +46,8 @@ export default function App() {
               <Route path="/provider" element={<Provider me={me} onChange={refresh} />} />
               <Route path="/provider/profile" element={<ProviderProfile me={me} onChange={refresh} />} />
               <Route path="/settings" element={<Settings me={me} onChange={refresh} />} />
+              <Route path="/messages" element={<Messages me={me} />} />
+              <Route path="/messages/:id" element={<Messages me={me} />} />
               <Route path="/providers" element={<Providers />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />

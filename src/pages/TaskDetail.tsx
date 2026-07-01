@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { api, money, type Task, type Me } from "../lib/api";
+import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { api, money, openConversation, type Task, type Me } from "../lib/api";
 import { useMode } from "../lib/mode";
 
 interface ResponseItem {
@@ -17,6 +17,7 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   // The route param is a slug ("<title>-<locality>-<id8>") or a legacy UUID; the
   // server resolves either. All follow-up calls use the canonical task.id.
   const { id: ref } = useParams();
+  const navigate = useNavigate();
   const { mode, setMode } = useMode();
   const [params] = useSearchParams();
   const [task, setTask] = useState<Task | null>(null);
@@ -76,6 +77,18 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   const select = async (responseId: string) => {
     await api.post(`/api/tasks/${taskId}/select-response`, { response_id: responseId }).catch(() => {});
     loadResponses();
+  };
+
+  // Open (or reuse) a private thread and jump to it. The owner names the counterpart;
+  // a provider (messaging the poster) is the initiator, so no id is needed.
+  const openThread = async (withUserId?: string) => {
+    if (!taskId) return;
+    try {
+      const cid = await openConversation("task", taskId, withUserId);
+      navigate(`/messages/${cid}`);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   return (
@@ -175,9 +188,16 @@ export default function TaskDetail({ me }: { me: Me | null }) {
                   {r.quote_cents !== null ? <span className="font-semibold text-brand-600">{money(r.quote_cents)}</span> : null}
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm">{r.message}</p>
-                {ownerView && task.status === "open" ? (
-                  <button onClick={() => select(r.id)} className="btn-secondary mt-3 !py-2 text-sm">Select this provider</button>
-                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ownerView ? (
+                    <button onClick={() => openThread(r.provider.id)} className="btn-secondary !py-2 text-sm">Message</button>
+                  ) : (
+                    <button onClick={() => openThread()} className="btn-secondary !py-2 text-sm">Message the poster</button>
+                  )}
+                  {ownerView && task.status === "open" ? (
+                    <button onClick={() => select(r.id)} className="btn-primary !py-2 text-sm">Select this provider</button>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>
