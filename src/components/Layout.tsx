@@ -19,12 +19,14 @@ function navLinks(mode: "neighbor" | "provider"): { to: string; label: string }[
         { to: "/provider", label: "Find work" },
         { to: "/my-tasks", label: "My tasks" },
         { to: "/messages", label: "Messages" },
+        { to: "/resources", label: "Resources" },
         { to: "/provider/profile", label: "My profile" },
       ]
     : [
         { to: "/post-task", label: "Post a task" },
         { to: "/my-tasks", label: "My tasks" },
         { to: "/messages", label: "Messages" },
+        { to: "/resources", label: "Resources" },
         { to: "/tasks", label: "Browse" },
       ];
 }
@@ -115,6 +117,7 @@ export function Layout({
           <p>© {new Date().getFullYear()} BidNeighbor</p>
           <nav className="flex flex-wrap items-center justify-center gap-4">
             <Link to="/providers" className="hover:underline">Find providers</Link>
+            <Link to="/resources" className="hover:underline">Rent equipment</Link>
             <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
             <Link to="/terms" className="hover:underline">Terms of Service</Link>
             <Link to="/sms-policy" className="hover:underline">SMS Policy</Link>

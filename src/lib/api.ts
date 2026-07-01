@@ -126,6 +126,33 @@ export async function openConversation(subjectType: string, subjectId: string, w
   return d.id;
 }
 
+// ---- Neighborhood Resources (equipment rentals) ----
+export interface ResourceOwner { id: string; name: string | null; town: string | null; county: string | null; provider_bio: string | null }
+export interface Resource {
+  id: string;
+  title: string;
+  description: string;
+  category_id: string | null;
+  daily_rate_cents: number | null;
+  deposit_cents: number | null;
+  town: string | null;
+  county: string | null;
+  status: string;
+  created_at: string;
+  cover_file_id?: string | null;
+  owner?: ResourceOwner;
+}
+export interface ResourceDetail extends Resource {
+  moderation_state: string;
+  is_owner: boolean;
+  files: { id: string; content_type: string }[];
+}
+
+/** Public URL for a listing photo. */
+export function resourceFileUrl(resourceId: string, fileId: string): string {
+  return `/api/resources/${resourceId}/files/${fileId}`;
+}
+
 export function money(cents: number | null): string {
   if (cents === null || cents === undefined) return "";
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;

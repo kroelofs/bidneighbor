@@ -14,6 +14,9 @@ import Provider from "./pages/Provider";
 import ProviderProfile from "./pages/ProviderProfile";
 import Settings from "./pages/Settings";
 import Messages from "./pages/Messages";
+import Resources from "./pages/Resources";
+import ResourceDetail from "./pages/ResourceDetail";
+import PostResource from "./pages/PostResource";
 import Providers from "./pages/Providers";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -49,6 +52,10 @@ export default function App() {
               <Route path="/settings" element={<Settings me={me} onChange={refresh} />} />
               <Route path="/messages" element={<Messages me={me} />} />
               <Route path="/messages/:id" element={<Messages me={me} />} />
+              <Route path="/resources" element={<Resources me={me} />} />
+              <Route path="/resources/new" element={<PostResource me={me} />} />
+              <Route path="/resources/:id" element={<ResourceDetail me={me} />} />
+              <Route path="/resources/:id/edit" element={<PostResource me={me} />} />
               <Route path="/providers" element={<Providers />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
