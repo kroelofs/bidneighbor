@@ -9,6 +9,7 @@ export default function ResourceDetail({ me }: { me: Me | null }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reported, setReported] = useState(false);
+  const [rentAgreed, setRentAgreed] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -75,14 +76,27 @@ export default function ResourceDetail({ me }: { me: Me | null }) {
 
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      {me && !r.is_owner ? (
+        <label className="mt-6 flex items-start gap-2 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-800">
+          <input type="checkbox" className="mt-1 shrink-0" checked={rentAgreed} onChange={(e) => setRentAgreed(e.target.checked)} />
+          <span>
+            If I rent this, I agree to treat the equipment with respect and return it in the same condition —
+            <strong> if I break it, I buy it</strong> (I'm responsible for repair or replacement). I understand
+            BidNeighbor only connects neighbors and is <strong>not responsible</strong> for any damage, injury,
+            or loss. I agree to the{" "}
+            <Link to="/liability" target="_blank" className="text-brand-600 underline">Liability Policy</Link>.
+          </span>
+        </label>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
         {r.is_owner ? (
           <>
             <Link to={`/resources/${r.id}/edit`} className="btn-secondary">Edit</Link>
             <button onClick={remove} className="btn-secondary">Remove</button>
           </>
         ) : me ? (
-          <button onClick={ask} className="btn-primary">Ask about this</button>
+          <button onClick={ask} disabled={!rentAgreed} className="btn-primary disabled:opacity-60">Ask about this</button>
         ) : (
           <Link to="/login" className="btn-primary">Sign in to ask about this</Link>
         )}
