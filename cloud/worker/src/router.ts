@@ -7,6 +7,7 @@ import * as categories from "./routes/categories";
 import * as tasks from "./routes/tasks";
 import * as responses from "./routes/responses";
 import * as conversations from "./routes/conversations";
+import * as resources from "./routes/resources";
 import * as files from "./routes/files";
 import * as provider from "./routes/provider";
 import * as places from "./routes/places";
@@ -81,6 +82,18 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
     if (method === "POST") return conversations.postMessage(req, env, ctx.auth, m.id);
   }
   if ((m = match("/api/conversations/:id/read", path)) && method === "POST") return conversations.markRead(req, env, ctx.auth, m.id);
+
+  // ---- Neighborhood Resources (equipment listings; browse public, mutations session-gated) ----
+  if (path === "/api/resources" && method === "GET") return resources.listResources(req, env);
+  if (path === "/api/resources" && method === "POST") return resources.createResource(req, env, ctx.auth);
+  if ((m = match("/api/resources/:rid/files/:fid", path)) && method === "GET") return resources.serveResourceFile(req, env, m.rid, m.fid);
+  if ((m = match("/api/resources/:id/files", path)) && method === "POST") return resources.uploadResourceFile(req, env, ctx.auth, m.id);
+  if ((m = match("/api/resources/:id/report", path)) && method === "POST") return resources.reportResource(req, env, ctx.auth, m.id);
+  if ((m = match("/api/resources/:id", path))) {
+    if (method === "GET") return resources.getResource(req, env, ctx.auth, m.id);
+    if (method === "PATCH") return resources.updateResource(req, env, ctx.auth, m.id);
+    if (method === "DELETE") return resources.deleteResource(req, env, ctx.auth, m.id);
+  }
   if ((m = match("/api/conversations/:id/files", path)) && method === "POST") return conversations.sendImage(req, env, ctx.auth, m.id);
   if ((m = match("/api/conversations/:cid/files/:fid", path)) && method === "GET") return conversations.serveFile(req, env, ctx.auth, m.cid, m.fid);
 
@@ -103,6 +116,8 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
     if ((m = match("/api/admin/categories/:id", path)) && method === "PATCH") return categories.updateCategory(req, env, ctx.auth, m.id);
     if (path === "/api/admin/audit-log" && method === "GET") return admin.adminAuditLog(req, env, ctx.auth);
     if (path === "/api/admin/integrations" && method === "GET") return admin.adminIntegrations(req, env, ctx.auth);
+    if (path === "/api/admin/resources" && method === "GET") return resources.adminListResources(req, env, ctx.auth);
+    if ((m = match("/api/admin/resources/:id", path)) && method === "PATCH") return resources.adminUpdateResource(req, env, ctx.auth, m.id);
     return notFound();
   }
 

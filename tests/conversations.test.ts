@@ -31,10 +31,11 @@ describe("notification recipient resolution", () => {
 describe("subject type allowlist", () => {
   it("accepts only known subject types", () => {
     expect(isSubjectType("task")).toBe(true);
+    expect(isSubjectType("resource")).toBe(true); // Resources reuse the thread engine
     expect(SUBJECT_TYPES).toContain("task");
+    expect(SUBJECT_TYPES).toContain("resource");
   });
   it("rejects unknown / non-string subjects (no 500 on a bogus subject)", () => {
-    expect(isSubjectType("resource")).toBe(false); // added in the Resources sprint
     expect(isSubjectType("user")).toBe(false);
     expect(isSubjectType(42)).toBe(false);
     expect(isSubjectType(undefined)).toBe(false);

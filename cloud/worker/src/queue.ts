@@ -2,6 +2,7 @@ import type { Env, NotificationJob } from "./types";
 import { sendEmail, layout } from "./lib/email";
 import { uuid, now } from "./lib/http";
 import { recipientOf } from "./lib/conversations";
+import { moderateContent } from "./lib/ai";
 
 /**
  * Notification consumer. This is where ALL email is sent — never inside
@@ -92,6 +93,24 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
       await recordAndSend(env, recipientId, "message_received", recipient.email, "You have a new message",
         layout("New message on BidNeighbor", `<p>You have a new private message about a job.</p>
          <p><a href="${link}">Read and reply</a></p>`));
+      return;
+    }
+    case "moderate_resource": {
+      const r = await env.DB.prepare("SELECT id, title, description, moderation_state FROM resources WHERE id = ?")
+        .bind(job.resource_id).first<{ id: string; title: string; description: string; moderation_state: string }>();
+      if (!r || r.moderation_state !== "pending") return; // edited/re-queued or gone
+      const verdict = await moderateContent(env, `${r.title}\n\n${r.description}`);
+      if (verdict.risky) {
+        // Hide from the board and route to the admin queue with the AI's reason.
+        await env.DB.prepare("UPDATE resources SET status = 'flagged', moderation_state = 'flagged', updated_at = ? WHERE id = ?")
+          .bind(now(), r.id).run();
+        await env.DB.prepare(
+          "INSERT INTO admin_flags (id, entity_type, entity_id, reason, status, created_at) VALUES (?, 'resource', ?, ?, 'open', ?)",
+        ).bind(uuid(), r.id, `AI moderation: ${verdict.reason ?? "flagged"}${verdict.categories?.length ? ` [${verdict.categories.join(", ")}]` : ""}`, now()).run();
+      } else {
+        await env.DB.prepare("UPDATE resources SET moderation_state = 'clear', updated_at = ? WHERE id = ?")
+          .bind(now(), r.id).run();
+      }
       return;
     }
   }
