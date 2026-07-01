@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Category, type Me } from "../lib/api";
+import { compressImage } from "../lib/image";
 import { COUNTIES, DEFAULT_COUNTY, townsForCounty } from "../lib/geo";
 import { loadGeo } from "../lib/geoConsent";
 import { Turnstile } from "../components/Turnstile";
@@ -58,8 +59,9 @@ export default function PostTask({ me, onChange }: { me: Me | null; onChange: ()
       const res = await api.post<{ id: string; slug: string; share_url: string }>("/api/tasks", { ...form, turnstileToken: token });
       if (files && files.length) {
         for (const file of Array.from(files).slice(0, MAX_IMAGES)) {
+          const image = await compressImage(file); // shrink oversized photos; non-images pass through
           const fd = new FormData();
-          fd.set("file", file);
+          fd.set("file", image);
           await api.upload(`/api/tasks/${res.id}/files`, fd).catch(() => {});
         }
       }
