@@ -22,7 +22,7 @@ export interface Env {
   GOOGLE_OAUTH_CLIENT_SECRET?: string;
   GOOGLE_PLACES_API_KEY?: string;
   SESSION_SIGNING_KEY?: string;
-  ANTHROPIC_API_KEY?: string; // Claude API — async resource content moderation (ai.ts)
+  OPENROUTER_API_KEY?: string; // OpenRouter — async resource content moderation (ai.ts)
 
   // Injected at build/deploy time (see deploy.yml)
   GIT_SHA?: string;

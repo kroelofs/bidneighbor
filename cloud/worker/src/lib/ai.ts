@@ -1,14 +1,16 @@
 import type { Env } from "../types";
 
 /**
- * AI content moderation via the Claude Messages API (raw fetch — this is an edge Worker,
- * no SDK bundled, mirroring email.ts / turnstile.ts). Runs OFF the request path, in the
- * queue consumer, so a slow or failed call never blocks a user.
+ * AI content moderation via OpenRouter (OpenAI-compatible chat/completions, raw fetch —
+ * this is an edge Worker, no SDK bundled, mirroring email.ts / turnstile.ts). Runs OFF the
+ * request path, in the queue consumer, so a slow or failed call never blocks a user.
  *
- * Model: claude-haiku-4-5 — the cheapest tier, well-suited to a short classification.
- * Swap MODEL to "claude-opus-4-8" for maximum accuracy at higher cost.
+ * Model: an OpenRouter `provider/model` slug. Default openai/gpt-4o-mini — cheap and a
+ * reliable tool-caller for a short classification. Swap MODEL to any OpenRouter model with
+ * function-calling support, e.g. "anthropic/claude-3.5-haiku" or "google/gemini-2.0-flash-001".
  */
-const MODEL = "claude-haiku-4-5";
+const MODEL = "openai/gpt-4o-mini";
+const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 export interface ModerationVerdict {
   risky: boolean;
@@ -16,27 +18,30 @@ export interface ModerationVerdict {
   categories?: string[];
 }
 
+// OpenAI-style function tool — forcing tool_choice makes the model return a structured verdict.
 const VERDICT_TOOL = {
-  name: "record_verdict",
-  description: "Record the moderation verdict for a marketplace equipment-rental listing.",
-  strict: true,
-  input_schema: {
-    type: "object",
-    properties: {
-      risky: {
-        type: "boolean",
-        description:
-          "true if the listing is sexually explicit, hateful, harassing, violent, illegal, a scam, or obvious spam; false for ordinary equipment/tool/vehicle rentals",
+  type: "function",
+  function: {
+    name: "record_verdict",
+    description: "Record the moderation verdict for a marketplace equipment-rental listing.",
+    parameters: {
+      type: "object",
+      properties: {
+        risky: {
+          type: "boolean",
+          description:
+            "true if the listing is sexually explicit, hateful, harassing, violent, illegal, a scam, or obvious spam; false for ordinary equipment/tool/vehicle rentals",
+        },
+        reason: { type: "string", description: "One short sentence explaining the verdict" },
+        categories: {
+          type: "array",
+          items: { type: "string", enum: ["explicit", "hate", "harassment", "violence", "illegal", "scam", "spam", "other"] },
+          description: "Matched risk categories; empty array if clear",
+        },
       },
-      reason: { type: "string", description: "One short sentence explaining the verdict" },
-      categories: {
-        type: "array",
-        items: { type: "string", enum: ["explicit", "hate", "harassment", "violence", "illegal", "scam", "spam", "other"] },
-        description: "Matched risk categories; empty array if clear",
-      },
+      required: ["risky", "reason", "categories"],
+      additionalProperties: false,
     },
-    required: ["risky", "reason", "categories"],
-    additionalProperties: false,
   },
 } as const;
 
@@ -53,27 +58,31 @@ const SYSTEM = [
  * blip never hides a legitimate listing. Console-logs the reason, like email.ts.
  */
 export async function moderateContent(env: Env, text: string): Promise<ModerationVerdict> {
-  if (!env.ANTHROPIC_API_KEY) {
-    console.log("[ai] ANTHROPIC_API_KEY absent — skipping AI moderation, treating as clear");
+  if (!env.OPENROUTER_API_KEY) {
+    console.log("[ai] OPENROUTER_API_KEY absent — skipping AI moderation, treating as clear");
     return { risky: false };
   }
 
   let res: Response;
   try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
+    res = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
         "content-type": "application/json",
+        // Optional OpenRouter attribution headers (surface the app on their dashboard).
+        "HTTP-Referer": env.APP_BASE_URL ?? "https://app.bidneighbor.com",
+        "X-Title": "BidNeighbor",
       },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 256,
-        system: SYSTEM,
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: `Listing to moderate:\n\n${text}` },
+        ],
         tools: [VERDICT_TOOL],
-        tool_choice: { type: "tool", name: "record_verdict" },
-        messages: [{ role: "user", content: `Listing to moderate:\n\n${text}` }],
+        tool_choice: { type: "function", function: { name: "record_verdict" } },
       }),
     });
   } catch (err) {
@@ -86,18 +95,28 @@ export async function moderateContent(env: Env, text: string): Promise<Moderatio
     return { risky: false };
   }
 
-  const data = (await res.json().catch(() => null)) as
-    | { content?: Array<{ type: string; input?: Record<string, unknown> }> }
-    | null;
-  const block = data?.content?.find((b) => b.type === "tool_use");
-  const input = block?.input;
-  if (!input || typeof input.risky !== "boolean") {
-    console.error("[ai] moderation returned no usable verdict");
+  const data = (await res.json().catch(() => null)) as {
+    choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
+  } | null;
+  // Forced tool_choice → arguments is a JSON string; some models instead put the JSON in content.
+  const raw =
+    data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ??
+    data?.choices?.[0]?.message?.content;
+  if (!raw) {
+    console.error("[ai] moderation returned no verdict");
     return { risky: false };
   }
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    console.error("[ai] moderation verdict was not valid JSON");
+    return { risky: false };
+  }
+  if (typeof parsed.risky !== "boolean") return { risky: false };
   return {
-    risky: input.risky,
-    reason: typeof input.reason === "string" ? input.reason : undefined,
-    categories: Array.isArray(input.categories) ? (input.categories as string[]) : undefined,
+    risky: parsed.risky,
+    reason: typeof parsed.reason === "string" ? parsed.reason : undefined,
+    categories: Array.isArray(parsed.categories) ? (parsed.categories as string[]) : undefined,
   };
 }
