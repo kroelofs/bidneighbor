@@ -17,6 +17,33 @@ export default function PostResource({ me }: { me: Me | null }) {
   const [agreed, setAgreed] = useState(editing); // existing listing already accepted
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  const autofill = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || drafting) return;
+    setDrafting(true); setDraftError(null);
+    try {
+      const image = await compressImage(file);
+      const form = new FormData();
+      form.append("file", image);
+      const d = await api.upload<{ title: string; description: string; daily_rate: number | null; town: string | null; county: string | null }>(
+        "/api/resources/draft", form,
+      );
+      if (d.title) setTitle(d.title);
+      if (d.description) setDescription(d.description);
+      if (d.daily_rate != null) setRate(String(d.daily_rate));
+      if (d.town) setTown(d.town);
+      if (d.county) setCounty(d.county);
+      setPhotos((p) => [...p, image]); // reuse the analyzed photo as a listing photo
+    } catch (err) {
+      setDraftError((err as Error).message);
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -69,6 +96,15 @@ export default function PostResource({ me }: { me: Me | null }) {
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-bold">{editing ? "Edit listing" : "List your equipment"}</h1>
       <p className="mt-1 text-sm text-gray-500">Help a neighbor's DIY project and earn from gear that's just sitting there.</p>
+      <div className="mt-4 rounded-lg border border-dashed border-brand-300 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
+        <p className="text-sm font-medium">✨ Auto-fill from a photo</p>
+        <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">Upload a picture of the item and we'll suggest the name, description, and a daily rate.</p>
+        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={autofill} disabled={drafting} className="mt-2 text-sm" />
+        {drafting ? <p className="mt-1 text-xs text-gray-500">Analyzing photo…</p> : null}
+        {draftError ? <p className="mt-1 text-xs text-red-600">{draftError}</p> : null}
+        <p className="mt-2 text-[11px] text-gray-500">⚠️ AI can make mistakes — please review and edit every field before posting.</p>
+      </div>
+
       <form onSubmit={submit} className="mt-4 space-y-3">
         <input className="input" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What is it? (e.g. Gas pressure washer)" />
         <textarea className="input min-h-28" required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe it — condition, what it's good for, pickup details." />

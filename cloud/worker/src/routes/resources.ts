@@ -4,6 +4,7 @@ import { sanitizeText, toCents } from "../lib/text";
 import { isSuspended, isAdmin } from "../lib/guards";
 import { rateLimit } from "../lib/ratelimit";
 import { screenText } from "../lib/moderation";
+import { draftResourceFromImage } from "../lib/ai";
 import { audit } from "../lib/audit";
 import { publicUser } from "../lib/serialize";
 
@@ -19,6 +20,15 @@ function imageMagicOk(contentType: string, bytes: Uint8Array): boolean {
   if (!sig) return false;
   for (let i = 0; i < sig.length; i++) if (bytes[i] !== sig[i]) return false;
   return true;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000; // build in chunks so String.fromCharCode doesn't blow the arg limit
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
 }
 
 interface ResourceRow {
@@ -138,6 +148,37 @@ export async function createResource(req: Request, env: Env, auth: AuthContext |
   ).run();
   await env.NOTIFICATION_QUEUE.send({ type: "moderate_resource", resource_id: id });
   return json({ id });
+}
+
+/**
+ * POST /api/resources/draft — AI-suggest listing fields from an equipment photo (session).
+ * Returns suggestions only; the user reviews/edits before posting. town/county come from the
+ * user's own profile (a photo can't reveal location), not from the model.
+ */
+export async function draftResource(req: Request, env: Env, auth: AuthContext | null): Promise<Response> {
+  if (!auth) return unauthorized();
+  if (isSuspended(auth)) return forbidden();
+  const rl = await rateLimit(env, `resource:draft:${auth.user.id}`, 30, 3600);
+  if (!rl.ok) return error(429, "You've used auto-fill a lot — try again later");
+
+  const form = await req.formData();
+  const entry = form.get("file");
+  if (!entry || typeof entry === "string") return badRequest("No image");
+  const file = entry as { size: number; type: string; arrayBuffer(): Promise<ArrayBuffer> };
+  if (file.size > MAX_IMAGE_BYTES) return badRequest("Image too large (max 10 MB)");
+  const buf = new Uint8Array(await file.arrayBuffer());
+  if (!imageMagicOk(file.type, buf)) return badRequest("Only JPG, PNG, or WebP images are allowed");
+
+  const draft = await draftResourceFromImage(env, `data:${file.type};base64,${toBase64(buf)}`);
+  if (!draft) return error(503, "Auto-fill isn't available right now — please fill the details in manually.");
+
+  return json({
+    title: draft.title ?? "",
+    description: draft.description ?? "",
+    daily_rate: draft.daily_rate ?? null,
+    town: auth.user.town,
+    county: auth.user.county,
+  });
 }
 
 /** PATCH /api/resources/:id — owner edit; re-screen and re-queue moderation. */
