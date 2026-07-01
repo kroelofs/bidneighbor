@@ -87,8 +87,14 @@ export interface Message {
   body: string;
   created_at: string;
 }
+export interface ThreadContext {
+  message: string;
+  quote_cents: number | null;
+  created_at: string;
+}
 export interface ThreadView {
-  conversation: { id: string; subject_type: string; subject_id: string; owner_id: string; initiator_id: string };
+  conversation: { id: string; subject_type: string; subject_id: string; subject_title: string | null; owner_id: string; initiator_id: string };
+  context: ThreadContext | null;
   messages: Message[];
 }
 

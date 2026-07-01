@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type Message, type ThreadView } from "../lib/api";
+import { api, money, type Message, type ThreadContext, type ThreadView } from "../lib/api";
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -12,6 +12,7 @@ function timeLabel(iso: string): string {
  */
 export default function MessageThread({ conversationId, onActivity }: { conversationId: string; onActivity?: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [context, setContext] = useState<ThreadContext | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [text, setText] = useState("");
@@ -21,12 +22,12 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
 
   const load = () => {
     api.get<ThreadView>(`/api/conversations/${conversationId}/messages`)
-      .then((d) => { setMessages(d.messages); setLoaded(true); onActivity?.(); })
+      .then((d) => { setMessages(d.messages); setContext(d.context); setLoaded(true); onActivity?.(); })
       .catch(() => { setNotFound(true); setLoaded(true); });
   };
 
   useEffect(() => {
-    setLoaded(false); setNotFound(false); setMessages([]);
+    setLoaded(false); setNotFound(false); setMessages([]); setContext(null);
     load();
     const t = setInterval(load, 15000); // gentle poll while the thread is open
     return () => clearInterval(t);
@@ -55,6 +56,14 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
 
   return (
     <div className="flex h-full flex-col">
+      {context ? (
+        <div className="mb-2 shrink-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900/40">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Their response
+            {context.quote_cents !== null ? <span className="ml-2 text-brand-600">{money(context.quote_cents)}</span> : null}
+          </p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{context.message}</p>
+        </div>
+      ) : null}
       <div className="flex-1 space-y-3 overflow-y-auto py-2">
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-500">No messages yet. Say hello 👋</p>
