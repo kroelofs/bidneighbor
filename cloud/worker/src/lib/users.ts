@@ -51,6 +51,7 @@ export async function findOrCreateByEmail(
     status: "active",
     notify_new_tasks: 1, // matches the column default; INSERT below relies on the DB default
     notify_responses: 1,
+    notify_messages: 1,
     last_mode: null, // never chosen yet → client defaults to 'neighbor'
     created_at: ts,
     updated_at: ts,

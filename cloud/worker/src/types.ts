@@ -53,6 +53,7 @@ export interface UserRow {
   status: "active" | "suspended";
   notify_new_tasks: number; // 0|1 — provider "new matching task" emails
   notify_responses: number; // 0|1 — "new response" / "you were selected" emails
+  notify_messages: number; // 0|1 — "new private message" emails
   last_mode: "neighbor" | "provider" | null; // last-used UI lens; null → client default
   created_at: string;
   updated_at: string;
@@ -80,4 +81,5 @@ export type NotificationJob =
   | { type: "task_posted"; task_id: string }
   | { type: "response_received"; task_id: string; response_id: string }
   | { type: "response_selected"; task_id: string; response_id: string }
+  | { type: "message_received"; message_id: string }
   | { type: "magic_link"; email: string; link: string };

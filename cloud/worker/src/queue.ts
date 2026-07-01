@@ -1,6 +1,7 @@
 import type { Env, NotificationJob } from "./types";
 import { sendEmail, layout } from "./lib/email";
 import { uuid, now } from "./lib/http";
+import { recipientOf } from "./lib/conversations";
 
 /**
  * Notification consumer. This is where ALL email is sent — never inside
@@ -72,6 +73,25 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
       await recordAndSend(env, null, "response_selected", row.provider_email, "You were selected!",
         layout("You were selected for a job", `<p>You were selected for <b>${row.title}</b>. Nice work!</p>
          <p><a href="${env.APP_BASE_URL}/tasks/${row.task_id}">View the job</a></p>`));
+      return;
+    }
+    case "message_received": {
+      const row = await env.DB.prepare(
+        `SELECT m.sender_id, c.id AS conversation_id, c.owner_id, c.initiator_id
+         FROM messages m JOIN conversations c ON c.id = m.conversation_id
+         WHERE m.id = ?`,
+      ).bind(job.message_id).first<{ sender_id: string; conversation_id: string; owner_id: string; initiator_id: string }>();
+      if (!row) return;
+      const recipientId = recipientOf(row, row.sender_id);
+      const recipient = await env.DB.prepare(
+        "SELECT email, notify_messages FROM users WHERE id = ?",
+      ).bind(recipientId).first<{ email: string; notify_messages: number }>();
+      if (!recipient || recipient.notify_messages !== 1) return;
+      // Never put the message text in the email — a thread can hold anything. Link out.
+      const link = `${env.APP_BASE_URL}/messages/${row.conversation_id}`;
+      await recordAndSend(env, recipientId, "message_received", recipient.email, "You have a new message",
+        layout("New message on BidNeighbor", `<p>You have a new private message about a job.</p>
+         <p><a href="${link}">Read and reply</a></p>`));
       return;
     }
   }
