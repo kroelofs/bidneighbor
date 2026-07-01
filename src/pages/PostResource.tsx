@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type ResourceDetail, type Me } from "../lib/api";
+import { compressImage } from "../lib/image";
 
 export default function PostResource({ me }: { me: Me | null }) {
   const { id } = useParams(); // present → edit mode
@@ -51,8 +52,9 @@ export default function PostResource({ me }: { me: Me | null }) {
         resourceId = d.id;
       }
       for (const file of photos) {
+        const image = await compressImage(file); // shrink oversized photos so the upload fits
         const form = new FormData();
-        form.append("file", file);
+        form.append("file", image);
         await api.upload(`/api/resources/${resourceId}/files`, form).catch(() => {});
       }
       navigate(`/resources/${resourceId}`);

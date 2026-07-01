@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, money, messageFileUrl, sendMessageImage, type Message, type ThreadContext, type ThreadView } from "../lib/api";
+import { compressImage } from "../lib/image";
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -58,7 +59,8 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
     if (!file || sending) return;
     setSending(true); setError(null);
     try {
-      await sendMessageImage(conversationId, file, text.trim() || undefined);
+      const image = await compressImage(file); // shrink oversized photos so the upload fits
+      await sendMessageImage(conversationId, image, text.trim() || undefined);
       setText("");
       load();
     } catch (err) {
