@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
+import { api, type ConversationSummary } from "../lib/api";
 import { ThemeToggle } from "./ThemeToggle";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 import { UserMenu } from "./UserMenu";
@@ -17,11 +18,13 @@ function navLinks(mode: "neighbor" | "provider"): { to: string; label: string }[
     ? [
         { to: "/provider", label: "Find work" },
         { to: "/my-tasks", label: "My tasks" },
+        { to: "/messages", label: "Messages" },
         { to: "/provider/profile", label: "My profile" },
       ]
     : [
         { to: "/post-task", label: "Post a task" },
         { to: "/my-tasks", label: "My tasks" },
+        { to: "/messages", label: "Messages" },
         { to: "/tasks", label: "Browse" },
       ];
 }
@@ -39,8 +42,26 @@ export function Layout({
 }) {
   const { mode, setMode } = useMode();
   const [setupOpen, setSetupOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  // Poll the inbox for an unread badge while signed in.
+  useEffect(() => {
+    if (!me) { setUnread(0); return; }
+    let alive = true;
+    const load = () =>
+      api.get<{ conversations: ConversationSummary[] }>("/api/conversations")
+        .then((d) => { if (alive) setUnread(d.conversations.reduce((n, c) => n + (c.unread || 0), 0)); })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => { alive = false; clearInterval(t); };
+  }, [me]);
 
   const links = me ? navLinks(mode) : [];
+  const badge = (to: string) =>
+    to === "/messages" && unread > 0 ? (
+      <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[10px] font-semibold text-white">{unread}</span>
+    ) : null;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -60,7 +81,7 @@ export function Layout({
               <>
                 {links.map((l) => (
                   <Link key={l.to} to={l.to} className="hidden px-2 py-1 hover:underline sm:inline">
-                    {l.label}
+                    {l.label}{badge(l.to)}
                   </Link>
                 ))}
                 <ThemeToggle />
@@ -81,7 +102,7 @@ export function Layout({
             <nav className="mt-2 flex items-center justify-center gap-4 text-sm">
               {links.map((l) => (
                 <Link key={l.to} to={l.to} className="py-1 hover:underline">
-                  {l.label}
+                  {l.label}{badge(l.to)}
                 </Link>
               ))}
             </nav>
