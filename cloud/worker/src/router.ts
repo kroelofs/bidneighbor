@@ -81,6 +81,8 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
     if (method === "POST") return conversations.postMessage(req, env, ctx.auth, m.id);
   }
   if ((m = match("/api/conversations/:id/read", path)) && method === "POST") return conversations.markRead(req, env, ctx.auth, m.id);
+  if ((m = match("/api/conversations/:id/files", path)) && method === "POST") return conversations.sendImage(req, env, ctx.auth, m.id);
+  if ((m = match("/api/conversations/:cid/files/:fid", path)) && method === "GET") return conversations.serveFile(req, env, ctx.auth, m.cid, m.fid);
 
   // ---- Provider ----
   if (path === "/api/provider/tasks" && method === "GET") return provider.providerTasks(req, env, ctx.auth);

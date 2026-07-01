@@ -80,12 +80,30 @@ export interface ConversationSummary {
   last_message_at: string | null;
   unread: number;
 }
+export interface MessageFile {
+  id: string;
+  content_type: string;
+}
 export interface Message {
   id: string;
   sender_id: string;
   mine: boolean;
   body: string;
+  files: MessageFile[];
   created_at: string;
+}
+
+/** URL to stream a private message attachment (participants only, server-authorized). */
+export function messageFileUrl(conversationId: string, fileId: string): string {
+  return `/api/conversations/${conversationId}/files/${fileId}`;
+}
+
+/** Send an image (with an optional caption) as a message. */
+export async function sendMessageImage(conversationId: string, file: File, caption?: string): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  if (caption) form.append("body", caption);
+  await api.upload(`/api/conversations/${conversationId}/files`, form);
 }
 export interface ThreadContext {
   message: string;

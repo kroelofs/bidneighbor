@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, money, type Message, type ThreadContext, type ThreadView } from "../lib/api";
+import { api, money, messageFileUrl, sendMessageImage, type Message, type ThreadContext, type ThreadView } from "../lib/api";
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -19,6 +19,7 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
     api.get<ThreadView>(`/api/conversations/${conversationId}/messages`)
@@ -51,6 +52,22 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
     }
   };
 
+  const pickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file || sending) return;
+    setSending(true); setError(null);
+    try {
+      await sendMessageImage(conversationId, file, text.trim() || undefined);
+      setText("");
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (!loaded) return <p className="py-8 text-center text-sm text-gray-500">Loading…</p>;
   if (notFound) return <p className="py-8 text-center text-sm text-gray-500">This conversation isn't available.</p>;
 
@@ -71,7 +88,17 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
           messages.map((m) => (
             <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.mine ? "bg-brand-500 text-white" : "bg-gray-100 dark:bg-gray-800"}`}>
-                <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p>
+                {m.files.map((f) => (
+                  <a key={f.id} href={messageFileUrl(conversationId, f.id)} target="_blank" rel="noreferrer" className="mb-1 block">
+                    <img
+                      src={messageFileUrl(conversationId, f.id)}
+                      alt="Shared image"
+                      loading="lazy"
+                      className="max-h-64 rounded-lg border border-black/10 object-cover"
+                    />
+                  </a>
+                ))}
+                {m.body ? <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p> : null}
                 <p className={`mt-1 text-[10px] ${m.mine ? "text-white/70" : "text-gray-400"}`}>{timeLabel(m.created_at)}</p>
               </div>
             </div>
@@ -80,6 +107,23 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
         <div ref={bottomRef} />
       </div>
       <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="mt-3 flex items-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={pickImage}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={sending}
+          title="Send an image"
+          aria-label="Send an image"
+          className="btn-secondary shrink-0 !px-3 disabled:opacity-60"
+        >
+          📷
+        </button>
         <textarea
           className="input min-h-11 flex-1"
           value={text}
