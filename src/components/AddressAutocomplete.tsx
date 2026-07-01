@@ -31,6 +31,7 @@ export default function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   // One session token groups the keystrokes + the details call into a single
   // billable Places session; reset it after each pick.
   const sessionRef = useRef<string>(crypto.randomUUID());
@@ -59,6 +60,7 @@ export default function AddressAutocomplete({
 
   const choose = async (s: Suggestion) => {
     setBusy(true);
+    setErr(null);
     setOpen(false);
     setQ(s.description);
     try {
@@ -67,7 +69,9 @@ export default function AddressAutocomplete({
       );
       onSelect(d.address);
     } catch {
-      /* user can still type the address manually */
+      // Details lookup failed — tell the user so they know to fill the fields below
+      // by hand rather than staring at a search box that "filled in" but did nothing.
+      setErr("Couldn't load that address automatically — please enter it in the fields below.");
     } finally {
       setBusy(false);
       sessionRef.current = crypto.randomUUID(); // start a fresh billing session
@@ -103,6 +107,7 @@ export default function AddressAutocomplete({
         </ul>
       )}
       {busy && <p className="mt-1 text-xs text-gray-500">Filling in address…</p>}
+      {err && <p className="mt-1 text-xs text-red-600">{err}</p>}
     </div>
   );
 }
