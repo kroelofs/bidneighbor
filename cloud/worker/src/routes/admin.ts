@@ -191,6 +191,12 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
       setup: "Create a Turnstile widget in the Cloudflare dashboard; set TURNSTILE_SECRET_KEY via `wrangler secret put` and the site key in the frontend.",
     },
     {
+      key: "openrouter", name: "OpenRouter (AI moderation)", category: "AI", kind: "secret", required: false,
+      configured: has(env.OPENROUTER_API_KEY), healthy: null,
+      detail: has(env.OPENROUTER_API_KEY) ? "AI content moderation runs on new resource listings (off the request path, in the queue consumer)." : "No OPENROUTER_API_KEY — AI moderation is skipped and listings are treated as clear (heuristics + user reports still apply).",
+      setup: "Create an API key at openrouter.ai/keys, then set OPENROUTER_API_KEY via `wrangler secret put`.",
+    },
+    {
       key: "d1", name: "D1 database", category: "Cloudflare", kind: "binding", required: true,
       configured: true, healthy: dbHealthy,
       detail: dbHealthy ? "Connected — query succeeded." : "Bound but a test query failed. Check the database_id in wrangler.toml and that migrations ran.",
