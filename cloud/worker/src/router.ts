@@ -14,7 +14,7 @@ import * as places from "./routes/places";
 import * as admin from "./routes/admin";
 import { getGeo } from "./routes/geo";
 
-type Ctx = { req: Request; env: Env; auth: AuthContext | null; isAdminHost: boolean };
+type Ctx = { req: Request; env: Env; auth: AuthContext | null };
 
 /** Dispatch an /api/* request. Returns a Response, or null if no route matched. */
 export async function routeApi(ctx: Ctx): Promise<Response | null> {
@@ -104,9 +104,8 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
   if (path === "/api/provider/categories" && method === "GET") return provider.getProviderCategories(req, env, ctx.auth);
   if (path === "/api/provider/categories" && method === "PUT") return provider.putProviderCategories(req, env, ctx.auth);
 
-  // ---- Admin (admin host ONLY — defense in depth on top of CF Access) ----
+  // ---- Admin (single host; the admin_level role check is the sole gate) ----
   if (path.startsWith("/api/admin/")) {
-    if (!ctx.isAdminHost) return notFound(); // admin surface does not exist on the public host
     if (!isAdmin(ctx.auth)) return error(403, "Admin access required");
     if (path === "/api/admin/users" && method === "GET") return admin.adminListUsers(req, env, ctx.auth);
     if ((m = match("/api/admin/users/:id", path)) && method === "PATCH") return admin.adminUpdateUser(req, env, ctx.auth, m.id);

@@ -12,26 +12,32 @@ export default {
     const host = (req.headers.get("host") || url.host).toLowerCase();
 
     // Canonical host: bare domain + www → the app host. Keeps one cookie domain and
-    // one set of OAuth redirect URIs (app./admin. only). 302 (not 301) while iterating.
+    // one set of OAuth redirect URIs. 302 (not 301) while iterating.
     if (host === "bidneighbor.com" || host === "www.bidneighbor.com") {
       return Response.redirect(`${env.APP_BASE_URL}${url.pathname}${url.search}`, 302);
     }
 
-    const isAdminHost = host === env.ADMIN_HOST || host.startsWith("admin.");
+    // Legacy admin host → the app host. Admin is now a route inside the single app
+    // SPA (app.bidneighbor.com/admin), so old admin.* bookmarks/deep links redirect
+    // here. "/" lands on the admin dashboard; deeper paths (e.g. /users) are kept.
+    if (host === env.ADMIN_HOST || host.startsWith("admin.")) {
+      const dest = url.pathname === "/" ? "/admin" : url.pathname;
+      return Response.redirect(`${env.APP_BASE_URL}${dest}${url.search}`, 302);
+    }
 
     // ---- US-only geo gate (app product surface only) ----
-    // The app host is United-States-only. The admin host stays open for travelling
-    // admins and /api/_health stays open for uptime monitors. The bare domain already
-    // 302-redirected above, so the only surface left to gate is the app host. Fail-open
+    // The app host is United-States-only, but the admin surface stays open for
+    // travelling admins and /api/_health stays open for uptime monitors. Fail-open
     // on unknown country (e.g. local dev). See lib/geogate.ts.
-    if (!isAdminHost && url.pathname !== "/api/_health" && !isCountryAllowed(req)) {
+    const isAdminSurface = url.pathname === "/admin" || url.pathname.startsWith("/admin/") || url.pathname.startsWith("/api/admin/");
+    if (url.pathname !== "/api/_health" && !isAdminSurface && !isCountryAllowed(req)) {
       return geoBlockResponse();
     }
 
     // ---- API ----
     if (url.pathname.startsWith("/api/")) {
       const auth = await resolveSession(req, env);
-      const res = await routeApi({ req, env, auth, isAdminHost });
+      const res = await routeApi({ req, env, auth });
       if (res) return res;
       return new Response(JSON.stringify({ error: "Not found" }), {
         status: 404,
@@ -39,25 +45,22 @@ export default {
       });
     }
 
-    // ---- Static assets + SPA shells ----
+    // ---- Static assets + SPA shell ----
     // Real files (have an extension, e.g. /assets/app-abc.js) come from ASSETS.
-    // Everything else is a client-side route and must get the SPA shell for THIS
-    // host — admin.html on the admin host, index.html otherwise. (The assets
-    // binding default-serves index.html at "/", so we cannot rely on it for the
-    // admin host; we pick the shell explicitly.)
+    // Everything else is a client-side route and gets the single SPA shell
+    // (index.html); the app's React Router renders /admin/* in the same bundle.
     const looksLikeFile = /\.[a-zA-Z0-9]+$/.test(url.pathname);
     if (looksLikeFile) {
       const assetRes = await env.ASSETS.fetch(req);
       if (assetRes.status !== 404) return assetRes;
     }
 
-    const shellPath = isAdminHost ? "/admin.html" : "/index.html";
-    const shellReq = new Request(new URL(shellPath, url.origin).toString(), { headers: req.headers });
+    const shellReq = new Request(new URL("/index.html", url.origin).toString(), { headers: req.headers });
     const shell = await env.ASSETS.fetch(shellReq);
 
-    // On the public host, enrich a task page's shell with Open Graph / Twitter meta
-    // so shared links show the title + first image. Falls back to the plain shell.
-    if (!isAdminHost && url.pathname.startsWith("/tasks/")) {
+    // Enrich a task page's shell with Open Graph / Twitter meta so shared links
+    // show the title + first image. Falls back to the plain shell.
+    if (url.pathname.startsWith("/tasks/")) {
       const baseHtml = await shell.text();
       const enriched = await injectTaskOg(env, url.pathname, baseHtml).catch(() => null);
       return new Response(enriched ?? baseHtml, {

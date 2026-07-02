@@ -4,7 +4,7 @@ import { isEmail } from "../lib/text";
 import { rateLimit, clientIp } from "../lib/ratelimit";
 import { verifyTurnstile } from "../lib/turnstile";
 import { randomToken } from "../lib/crypto";
-import { createSession, clearCookie, destroySession } from "../lib/session";
+import { createSession, clearCookie, destroySession, reissueCookie } from "../lib/session";
 import { findOrCreateByEmail } from "../lib/users";
 import { selfUser } from "../lib/serialize";
 import { buildConsentUrl, exchangeCode, googleConfigured } from "../lib/google";
@@ -85,11 +85,17 @@ export async function logout(_req: Request, env: Env, auth: AuthContext | null):
   return json({ ok: true }, { headers: { "set-cookie": clearCookie() } });
 }
 
-/** POST /api/auth/stop-impersonation — ends an impersonation session, returns to admin. */
+/**
+ * POST /api/auth/stop-impersonation — ends an impersonation session and restores the
+ * admin's own session cookie (single host: the impersonation cookie had overwritten it).
+ * Falls back to clearing the cookie if the admin's session has since expired.
+ */
 export async function stopImpersonation(_req: Request, env: Env, auth: AuthContext | null): Promise<Response> {
   if (!auth) return unauthorized();
   if (!auth.session.impersonator_id) return badRequest("Not impersonating");
   await audit(env, auth, "impersonate.stop", { entityType: "user", entityId: auth.user.id });
   await destroySession(env, auth.sessionId);
-  return json({ ok: true, return_to: env.ADMIN_BASE_URL }, { headers: { "set-cookie": clearCookie() } });
+  const adminSessionId = auth.session.impersonator_session_id;
+  const restored = adminSessionId ? await reissueCookie(env, adminSessionId) : null;
+  return json({ ok: true, return_to: "/admin" }, { headers: { "set-cookie": restored ?? clearCookie() } });
 }

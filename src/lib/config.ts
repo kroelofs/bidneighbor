@@ -6,8 +6,6 @@ export const TURNSTILE_SITE_KEY = "0x4AAAAAADtjxrb9EH3ZzII3";
 
 export const APP_ORIGIN = "https://app.bidneighbor.com";
 
-export const ADMIN_ORIGIN = "https://admin.bidneighbor.com";
-
 /** Sign-in always lands on the app host. On the app host itself (or local dev) use a
  *  relative path; anywhere else (e.g. the bidneighbor.com marketing apex), an absolute
  *  URL to app.bidneighbor.com. */

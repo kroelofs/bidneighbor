@@ -122,10 +122,14 @@ npx tsc --noEmit    # root tsconfig includes src/ AND cloud/worker/src — one p
    what `NOTIFICATION_QUEUE` is for.
 4. **D1 schema drift** — local migrations and remote D1 can diverge. Migrations that recreate tables can drop
    columns; preserve all columns in `INSERT...SELECT`.
-5. **Admin surface defense-in-depth** — admin API routes are gated BOTH by Cloudflare Access (network, on the
-   `admin.bidneighbor.com` host) AND by server-side role checks. Never rely on only one. See [`SPEC.md`](SPEC.md) § Auth.
+5. **Admin surface is role-gated** — the admin dashboard (`/admin`) and `/api/admin/*` live on the single app
+   host (`app.bidneighbor.com`); the server-side `isAdmin()` (`admin_level`) check in `lib/guards.ts` is the
+   sole authorization gate (Cloudflare Access on the old `admin.bidneighbor.com` host was retired). Every
+   admin API handler MUST call `isAdmin(auth)` — the router no longer isolates admin by host. See [`SPEC.md`](SPEC.md) § Auth.
 6. **Impersonation ("login as user")** — every action under impersonation must be audit-logged with both the
-   real admin id and the target user id. Impersonation sessions cannot reach the admin host. See [`SPEC.md`](SPEC.md) § Admin.
+   real admin id and the target user id. Single host means the impersonation cookie overwrites the admin's own
+   session cookie; `stop-impersonation` restores it from `impersonator_session_id` (see `lib/session.ts`
+   `reissueCookie`). See [`SPEC.md`](SPEC.md) § Admin.
 
 ## Deploy provenance
 `GET /api/_health` → `{ status, sha, deployed_at }`. Compare `.sha` to the merged commit to confirm the exact
