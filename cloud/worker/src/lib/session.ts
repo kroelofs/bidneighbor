@@ -12,7 +12,7 @@ function kvKey(id: string) {
 export async function createSession(
   env: Env,
   user: UserRow,
-  opts: { impersonatorId?: string; impersonatorName?: string } = {},
+  opts: { impersonatorId?: string; impersonatorName?: string; impersonatorSessionId?: string } = {},
 ): Promise<{ id: string; cookie: string }> {
   const id = randomToken(32);
   const isImpersonation = !!opts.impersonatorId;
@@ -25,10 +25,26 @@ export async function createSession(
     expires_at: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
     impersonator_id: opts.impersonatorId ?? null,
     impersonator_name: opts.impersonatorName ?? null,
+    impersonator_session_id: opts.impersonatorSessionId ?? null,
   };
   await env.RATE_LIMITS.put(kvKey(id), JSON.stringify(session), { expirationTtl: ttlSeconds });
   const cookie = await buildCookie(env, id, ttlSeconds);
   return { id, cookie };
+}
+
+/**
+ * Rebuild a signed cookie for an EXISTING session id, used to restore an admin's
+ * own session after they stop impersonating (single host: the impersonation cookie
+ * overwrote theirs). Returns null if the session is gone or expired — the caller
+ * should clear the cookie instead. Max-Age tracks the session's remaining lifetime.
+ */
+export async function reissueCookie(env: Env, sessionId: string): Promise<string | null> {
+  const stored = await env.RATE_LIMITS.get(kvKey(sessionId));
+  if (!stored) return null;
+  const session = JSON.parse(stored) as Session;
+  const remainingSec = Math.floor((new Date(session.expires_at).getTime() - Date.now()) / 1000);
+  if (remainingSec <= 0) return null;
+  return buildCookie(env, sessionId, remainingSec);
 }
 
 async function buildCookie(env: Env, id: string, ttlSeconds: number): Promise<string> {

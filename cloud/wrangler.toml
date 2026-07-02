@@ -14,9 +14,10 @@ binding = "ASSETS"
 
 [vars]
 APP_BASE_URL = "https://app.bidneighbor.com"
-ADMIN_BASE_URL = "https://admin.bidneighbor.com"
 EMAIL_FROM = "BidNeighbor <no-reply@bidneighbor.com>"
 APP_HOST = "app.bidneighbor.com"
+# Legacy admin subdomain — the Worker only uses it to 302-redirect old admin.* links
+# to app.bidneighbor.com/admin (admin is now a route in the single app SPA).
 ADMIN_HOST = "admin.bidneighbor.com"
 
 [[d1_databases]]

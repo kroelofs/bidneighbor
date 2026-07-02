@@ -10,8 +10,9 @@ Full product/technical spec: [`SPEC.md`](SPEC.md). Contributor rules: [`CLAUDE.m
 
 ## Stack
 Cloudflare Workers · D1 · R2 · KV · Queues · Turnstile · React 18 + Vite + TypeScript + Tailwind 3.
-One Worker serves both hostnames and routes by `Host`; the frontend builds two SPAs
-(`index.html` user app, `admin.html` admin app) served as static assets.
+One Worker serves the app; the frontend is a single SPA (`index.html`) served as static
+assets, with the admin dashboard as a lazy-loaded `/admin` route (admins reach it from the
+profile menu). Legacy `admin.bidneighbor.com` links 302-redirect to `app.bidneighbor.com/admin`.
 
 ## Layout
 ```

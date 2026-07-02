@@ -10,10 +10,9 @@ export interface Env {
 
   // Vars (wrangler.toml [vars])
   APP_BASE_URL: string;
-  ADMIN_BASE_URL: string;
   EMAIL_FROM: string;
   APP_HOST: string;
-  ADMIN_HOST: string;
+  ADMIN_HOST: string; // legacy admin subdomain — only used to 302-redirect old links to /admin
 
   // Secrets (wrangler secret put)
   TURNSTILE_SECRET_KEY?: string;
@@ -69,6 +68,9 @@ export interface Session {
   /** Set when an admin is impersonating this user. Null for normal sessions. */
   impersonator_id: string | null;
   impersonator_name?: string | null;
+  /** The admin's OWN session id, stashed so "stop impersonating" can restore their
+   *  cookie on the same host (single-host: the impersonation cookie overwrote it). */
+  impersonator_session_id?: string | null;
 }
 
 /** Authenticated request context, attached after session resolution. */

@@ -47,9 +47,10 @@ export async function adminUpdateUser(req: Request, env: Env, auth: AuthContext 
 
 /**
  * POST /api/admin/users/:id/impersonate — "Log in as user."
- * Creates a short-lived impersonation session on the USER app host and returns a
- * one-time URL the admin UI redirects to. Records impersonator_id on the session
- * and an audit row. platform_manager may NOT impersonate.
+ * Creates a short-lived impersonation session and returns a one-time URL the admin
+ * UI redirects to (a bounce that cleanly set-cookies via a 302 rather than over XHR).
+ * Records impersonator_id + the admin's own session id (so "stop" can restore it) and
+ * an audit row. platform_manager may NOT impersonate.
  */
 export async function adminImpersonate(_req: Request, env: Env, auth: AuthContext | null, id: string): Promise<Response> {
   if (!canImpersonate(auth)) return forbidden();
@@ -60,18 +61,21 @@ export async function adminImpersonate(_req: Request, env: Env, auth: AuthContex
   const { id: sid, cookie } = await createSession(env, target, {
     impersonatorId: auth!.user.id,
     impersonatorName: auth!.user.name ?? auth!.user.email,
+    impersonatorSessionId: auth!.sessionId,
   });
   await audit(env, auth, "impersonate.start", { entityType: "user", entityId: id, meta: { session: sid } });
 
-  // Hand the cookie to the user app via a one-time bounce token stored in KV.
+  // Bounce through a one-time token so the impersonation cookie is set via a 302
+  // (not stored from an XHR response). Single host, so the cookie replaces the
+  // admin's own — stop-impersonation restores it from impersonator_session_id.
   const handoff = randomToken(24);
   await env.RATE_LIMITS.put(`handoff:${handoff}`, cookie, { expirationTtl: 120 });
   return json({ redirect_url: `${env.APP_BASE_URL}/api/auth/impersonate-land?h=${handoff}` });
 }
 
 /**
- * GET /api/auth/impersonate-land?h=... — runs on the USER host, sets the
- * impersonation cookie (which is scoped to that host) and redirects into the app.
+ * GET /api/auth/impersonate-land?h=... — consumes the one-time token, sets the
+ * impersonation cookie and redirects into the app.
  */
 export async function impersonateLand(req: Request, env: Env): Promise<Response> {
   const h = new URL(req.url).searchParams.get("h");
