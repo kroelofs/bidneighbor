@@ -69,7 +69,7 @@ export default function ProviderSetup({
           </div>
           <div>
             <label className="label">What kind of work do you do?</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {cats.map((c) => (
                 <label
                   key={c.id}

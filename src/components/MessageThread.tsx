@@ -96,7 +96,7 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
                       src={messageFileUrl(conversationId, f.id)}
                       alt="Shared image"
                       loading="lazy"
-                      className="max-h-64 rounded-lg border border-black/10 object-cover"
+                      className="max-h-64 max-w-full rounded-lg border border-black/10 object-cover"
                     />
                   </a>
                 ))}
@@ -134,7 +134,7 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
           rows={1}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
         />
-        <button className="btn-primary shrink-0" disabled={sending || !text.trim()}>Send</button>
+        <button className="btn-primary shrink-0 !px-4 sm:!px-5" disabled={sending || !text.trim()}>Send</button>
       </form>
       {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
     </div>

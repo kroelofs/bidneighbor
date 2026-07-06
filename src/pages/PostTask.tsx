@@ -93,7 +93,7 @@ export default function PostTask({ me, onChange }: { me: Me | null; onChange: ()
             {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="label">County</label>
             <select className="input" value={form.county} onChange={(e) => { set("county", e.target.value); set("town", ""); }}>
@@ -112,7 +112,7 @@ export default function PostTask({ me, onChange }: { me: Me | null; onChange: ()
           <label className="label">Approximate location (kept private)</label>
           <input className="input" maxLength={200} value={form.location_note} onChange={(e) => set("location_note", e.target.value)} placeholder="e.g. North side of town — exact address shared privately" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Budget (optional)</label>
             <div className="relative">

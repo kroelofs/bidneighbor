@@ -80,7 +80,7 @@ export default function AddressOnboarding({ me, onSaved }: { me: Me | null; onSa
             <label className="label">Street address</label>
             <input className="input" value={addr.street_address} onChange={(e) => set("street_address", e.target.value)} placeholder="123 Main St" />
           </div>
-          <div className="grid grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             <div className="col-span-3"><label className="label">City</label><input className="input" value={addr.city} onChange={(e) => set("city", e.target.value)} /></div>
             <div className="col-span-1"><label className="label">State</label><input className="input" maxLength={2} value={addr.state} onChange={(e) => set("state", e.target.value.toUpperCase())} placeholder="IA" /></div>
             <div className="col-span-2"><label className="label">ZIP</label><input className="input" inputMode="numeric" maxLength={10} value={addr.zip} onChange={(e) => set("zip", e.target.value)} /></div>

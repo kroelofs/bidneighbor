@@ -62,11 +62,11 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
       <h1 className="text-2xl font-bold">Provider profile</h1>
       <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Set your area and pick the categories you want job alerts for.</p>
       <form onSubmit={save} className="mt-4 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className="label">Name</label><input className="input" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></div>
           <div><label className="label">Phone (private)</label><input className="input" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="label">County</label>
             <select className="input" value={profile.county} onChange={(e) => setProfile({ ...profile, county: e.target.value })}>
@@ -83,7 +83,7 @@ export default function ProviderProfile({ me, onChange }: { me: Me | null; onCha
           <label className="label">Street address (private)</label>
           <input className="input" value={profile.street_address} onChange={(e) => setProfile({ ...profile, street_address: e.target.value })} placeholder="123 Main St" />
         </div>
-        <div className="grid grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           <div className="col-span-3"><label className="label">City</label><input className="input" value={profile.city} onChange={(e) => setProfile({ ...profile, city: e.target.value })} /></div>
           <div className="col-span-1"><label className="label">State</label><input className="input" maxLength={2} value={profile.state} onChange={(e) => setProfile({ ...profile, state: e.target.value.toUpperCase() })} placeholder="IA" /></div>
           <div className="col-span-2"><label className="label">ZIP</label><input className="input" inputMode="numeric" maxLength={10} value={profile.zip} onChange={(e) => setProfile({ ...profile, zip: e.target.value })} /></div>

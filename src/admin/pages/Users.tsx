@@ -50,7 +50,7 @@ export default function Users({ me }: { me: Me }) {
       </div>
 
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full min-w-[600px] text-left text-sm">
           <thead className="border-b border-gray-200 text-gray-500 dark:border-gray-800">
             <tr><th className="py-2">Email</th><th>Name</th><th>Role</th><th>County</th><th>Status</th><th></th></tr>
           </thead>
