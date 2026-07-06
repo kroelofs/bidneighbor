@@ -31,21 +31,39 @@ export default function Messages({ me }: { me: Me | null }) {
     );
   }
 
-  // Thread view
+  // Thread view — a full-screen chat: header pinned on top, composer pinned to the
+  // bottom (both live inside the viewport-height column Layout hands us), message
+  // list scrolls between them. The job title links out to its public post.
   if (id) {
     const active = convos.find((c) => c.id === id);
+    const postHref = active
+      ? active.subject_type === "resource"
+        ? `/resources/${active.subject_id}`
+        : `/tasks/${active.subject_id}`
+      : null;
     return (
-      <div className="mx-auto flex h-[70dvh] max-w-2xl flex-col">
-        <div className="mb-3 flex items-center gap-3">
-          <button onClick={() => navigate("/messages")} className="text-sm text-brand-600 hover:underline">← All messages</button>
+      <div className="mx-auto flex h-full w-full max-w-2xl flex-col">
+        <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+          <button
+            onClick={() => navigate("/messages")}
+            className="shrink-0 text-sm text-brand-600 hover:underline"
+          >
+            ← All messages
+          </button>
           {active ? (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{active.other_party.name || "Neighbor"}</p>
-              {active.subject_label ? <p className="truncate text-xs text-gray-500">{active.subject_label}</p> : null}
+              <p className="truncate font-semibold">{active.other_party.name || "Neighbor"}</p>
+              {active.subject_label && postHref ? (
+                <Link to={postHref} className="block truncate text-xs text-brand-600 hover:underline">
+                  {active.subject_label}
+                </Link>
+              ) : active.subject_label ? (
+                <p className="truncate text-xs text-gray-500">{active.subject_label}</p>
+              ) : null}
             </div>
           ) : null}
         </div>
-        <div className="card flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1">
           <MessageThread conversationId={id} onActivity={loadInbox} />
         </div>
       </div>

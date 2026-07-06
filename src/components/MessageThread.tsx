@@ -74,16 +74,16 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
   if (notFound) return <p className="py-8 text-center text-sm text-gray-500">This conversation isn't available.</p>;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {context ? (
-        <div className="mb-2 shrink-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900/40">
+        <div className="mx-4 mt-3 shrink-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900/40">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Their response
             {context.quote_cents !== null ? <span className="ml-2 text-brand-600">{money(context.quote_cents)}</span> : null}
           </p>
           <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{context.message}</p>
         </div>
       ) : null}
-      <div className="flex-1 space-y-3 overflow-y-auto py-2">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-500">No messages yet. Say hello 👋</p>
         ) : (
@@ -108,7 +108,7 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
         )}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="mt-3 flex items-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+      <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="flex shrink-0 items-end gap-2 border-t border-gray-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-gray-800">
         <input
           ref={fileRef}
           type="file"
@@ -136,7 +136,7 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
         />
         <button className="btn-primary shrink-0 !px-4 sm:!px-5" disabled={sending || !text.trim()}>Send</button>
       </form>
-      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="px-4 pb-2 text-sm text-red-600">{error}</p> : null}
     </div>
   );
 }
