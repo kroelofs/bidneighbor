@@ -83,7 +83,7 @@ export default function MessageThread({ conversationId, onActivity }: { conversa
           <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{context.message}</p>
         </div>
       ) : null}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+      <div className="scrollbar-modern min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-500">No messages yet. Say hello 👋</p>
         ) : (
