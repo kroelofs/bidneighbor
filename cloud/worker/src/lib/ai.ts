@@ -1,4 +1,5 @@
 import type { Env } from "../types";
+import { getSecret } from "./secrets";
 
 /**
  * AI content moderation via OpenRouter (OpenAI-compatible chat/completions, raw fetch —
@@ -58,8 +59,9 @@ const SYSTEM = [
  * blip never hides a legitimate listing. Console-logs the reason, like email.ts.
  */
 export async function moderateContent(env: Env, text: string): Promise<ModerationVerdict> {
-  if (!env.OPENROUTER_API_KEY) {
-    console.log("[ai] OPENROUTER_API_KEY absent — skipping AI moderation, treating as clear");
+  const apiKey = await getSecret(env, "OPENROUTER_API_KEY");
+  if (!apiKey) {
+    console.log("[ai] OpenRouter key absent — skipping AI moderation, treating as clear");
     return { risky: false };
   }
 
@@ -68,7 +70,7 @@ export async function moderateContent(env: Env, text: string): Promise<Moderatio
     res = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
         // Optional OpenRouter attribution headers (surface the app on their dashboard).
         "HTTP-Referer": env.APP_BASE_URL ?? "https://app.bidneighbor.com",
@@ -156,14 +158,15 @@ const DRAFT_TOOL = {
  * absent or on any error — the caller surfaces a friendly "try again / fill manually" message.
  */
 export async function draftResourceFromImage(env: Env, imageDataUrl: string): Promise<ResourceDraft | null> {
-  if (!env.OPENROUTER_API_KEY) return null;
+  const apiKey = await getSecret(env, "OPENROUTER_API_KEY");
+  if (!apiKey) return null;
 
   let res: Response;
   try {
     res = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
         "HTTP-Referer": env.APP_BASE_URL ?? "https://app.bidneighbor.com",
         "X-Title": "BidNeighbor",

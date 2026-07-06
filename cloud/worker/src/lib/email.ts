@@ -1,9 +1,11 @@
 import type { Env } from "../types";
+import { getSecret } from "./secrets";
 
 /**
  * Send a transactional email via Resend's HTTP API. Called only from the Queue
- * consumer (never inside ctx.waitUntil). If EMAIL_API_KEY is unset (local dev),
- * the email is logged to the console instead of sent.
+ * consumer (never inside ctx.waitUntil). If the Resend key is unset (local dev),
+ * the email is logged to the console instead of sent. The key is read via getSecret
+ * so a live override set from /admin/integrations takes precedence over the env value.
  */
 export async function sendEmail(
   env: Env,
@@ -11,14 +13,15 @@ export async function sendEmail(
   subject: string,
   html: string,
 ): Promise<{ ok: boolean; detail?: string }> {
-  if (!env.EMAIL_API_KEY) {
+  const apiKey = await getSecret(env, "EMAIL_API_KEY");
+  if (!apiKey) {
     console.log(`[email:dev] to=${to} subject="${subject}"\n${html}`);
     return { ok: true, detail: "dev-noop" };
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${env.EMAIL_API_KEY}`,
+      authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({ from: env.EMAIL_FROM, to, subject, html }),

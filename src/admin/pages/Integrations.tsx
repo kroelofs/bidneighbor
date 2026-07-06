@@ -9,6 +9,7 @@ interface Integration {
   required: boolean;
   configured: boolean;
   healthy: boolean | null;
+  editable?: boolean;
   detail: string;
   setup: string;
 }
@@ -26,6 +27,56 @@ function statusFor(i: Integration): { label: string; classes: string } {
   }
   if (i.healthy === true) return { label: "Connected", classes: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" };
   return { label: "Configured", classes: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" };
+}
+
+/** Inline API-key setter for editable secrets (Resend, OpenRouter). Never shows the current value. */
+function SecretEditor({ integration, onSaved }: { integration: Integration; onSaved: () => void }) {
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [savedOk, setSavedOk] = useState(false);
+
+  const save = () => {
+    const v = value.trim();
+    if (!v || saving) return;
+    setSaving(true);
+    setErr(null);
+    setSavedOk(false);
+    api
+      .post(`/api/admin/integrations/${integration.key}`, { value: v })
+      .then(() => {
+        setValue("");
+        setSavedOk(true);
+        onSaved();
+      })
+      .catch((e) => setErr((e as Error).message))
+      .finally(() => setSaving(false));
+  };
+
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">
+        {integration.configured ? "Replace API key" : "Set API key"}
+      </label>
+      <div className="flex gap-2">
+        <input
+          type="password"
+          value={value}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={integration.configured ? "Enter a new key to replace the current one" : "Paste API key"}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+          className="input !py-2 text-sm"
+        />
+        <button className="btn-primary !py-2 text-sm" disabled={saving || !value.trim()} onClick={save}>
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+      {err ? <p className="mt-1 text-xs text-red-600">{err}</p> : null}
+      {savedOk ? <p className="mt-1 text-xs text-green-600">Saved. New requests use the updated key immediately.</p> : null}
+    </div>
+  );
 }
 
 export default function Integrations() {
@@ -53,8 +104,8 @@ export default function Integrations() {
         <button className="btn-secondary !py-2 text-sm" onClick={load}>Re-check</button>
       </div>
       <p className="mt-1 text-sm text-gray-500">
-        Live status of external services and Cloudflare bindings. Read-only — secret values are never shown.
-        Set secrets with <code>wrangler secret put</code>; bindings live in <code>cloud/wrangler.toml</code>.
+        Live status of external services. Editable keys (Resend, OpenRouter) can be set right here — current
+        values are never shown. Other secrets are set with <code>wrangler secret put</code>.
       </p>
 
       <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${problems ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200" : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"}`}>
@@ -82,6 +133,7 @@ export default function Integrations() {
                       <span className="font-medium">Setup: </span>{i.setup}
                     </p>
                   ) : null}
+                  {i.editable ? <SecretEditor integration={i} onSaved={load} /> : null}
                 </div>
               );
             })}

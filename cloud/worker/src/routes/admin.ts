@@ -2,6 +2,7 @@ import type { Env, AuthContext, UserRow } from "../types";
 import { json, badRequest, forbidden, notFound, now } from "../lib/http";
 import { isAdmin, canImpersonate } from "../lib/guards";
 import { audit } from "../lib/audit";
+import { EDITABLE_SECRETS, isEditableSecretKey, isSecretConfigured, setSecret } from "../lib/secrets";
 import { createSession } from "../lib/session";
 import { getUserById } from "../lib/users";
 import { randomToken } from "../lib/crypto";
@@ -126,15 +127,17 @@ interface IntegrationStatus {
   configured: boolean;
   /** Live probe result where cheap to run; null when not probed. */
   healthy: boolean | null;
+  /** True when the key can be set live from this page (stored as a KV override). */
+  editable?: boolean;
   detail: string;
   setup: string;
 }
 
 /**
- * GET /api/admin/integrations — read-only status of external integrations and
- * Cloudflare bindings. Returns ONLY booleans (configured/healthy) — never secret
- * values. Secrets can't be set from here (they live in `wrangler secret`); this is
- * a diagnostics surface, not a credential editor.
+ * GET /api/admin/integrations — status of external integrations. Returns ONLY
+ * booleans (configured/healthy) — never secret values. Editable keys (Resend,
+ * OpenRouter) can be set live via POST (see adminUpdateIntegration); the rest are
+ * deploy-time `wrangler secret`s and remain read-only diagnostics here.
  */
 export async function adminIntegrations(_req: Request, env: Env, auth: AuthContext | null): Promise<Response> {
   if (!isAdmin(auth)) return forbidden();
@@ -164,6 +167,9 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
 
   const has = (v: unknown) => typeof v === "string" && v.length > 0;
   const sessionSecure = has(env.SESSION_SIGNING_KEY) && env.SESSION_SIGNING_KEY !== "dev-insecure-signing-key";
+  // Editable keys may be set as a live KV override or via env — check both.
+  const resendConfigured = await isSecretConfigured(env, "EMAIL_API_KEY");
+  const openrouterConfigured = await isSecretConfigured(env, "OPENROUTER_API_KEY");
 
   const integrations: IntegrationStatus[] = [
     {
@@ -179,10 +185,10 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
       setup: "Generate 32+ random bytes and set SESSION_SIGNING_KEY via `wrangler secret put`.",
     },
     {
-      key: "resend", name: "Resend (email)", category: "Email", kind: "secret", required: true,
-      configured: has(env.EMAIL_API_KEY), healthy: null,
-      detail: has(env.EMAIL_API_KEY) ? `Transactional email enabled. From: ${env.EMAIL_FROM}` : "No EMAIL_API_KEY — magic-link & notification emails are logged to the console instead of sent.",
-      setup: "Verify the bidneighbor.com domain in Resend (SPF/DKIM), then set EMAIL_API_KEY via `wrangler secret put`.",
+      key: "resend", name: "Resend (email)", category: "Email", kind: "secret", required: true, editable: true,
+      configured: resendConfigured, healthy: null,
+      detail: resendConfigured ? `Transactional email enabled. From: ${env.EMAIL_FROM}` : "No Resend API key — magic-link & notification emails are logged to the console instead of sent.",
+      setup: "Verify the bidneighbor.com domain in Resend (SPF/DKIM), create an API key at resend.com/api-keys, then paste it below.",
     },
     {
       key: "turnstile", name: "Cloudflare Turnstile", category: "Anti-spam", kind: "secret", required: false,
@@ -191,10 +197,10 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
       setup: "Create a Turnstile widget in the Cloudflare dashboard; set TURNSTILE_SECRET_KEY via `wrangler secret put` and the site key in the frontend.",
     },
     {
-      key: "openrouter", name: "OpenRouter (AI moderation)", category: "AI", kind: "secret", required: false,
-      configured: has(env.OPENROUTER_API_KEY), healthy: null,
-      detail: has(env.OPENROUTER_API_KEY) ? "AI content moderation runs on new resource listings (off the request path, in the queue consumer)." : "No OPENROUTER_API_KEY — AI moderation is skipped and listings are treated as clear (heuristics + user reports still apply).",
-      setup: "Create an API key at openrouter.ai/keys, then set OPENROUTER_API_KEY via `wrangler secret put`.",
+      key: "openrouter", name: "OpenRouter (AI moderation)", category: "AI", kind: "secret", required: false, editable: true,
+      configured: openrouterConfigured, healthy: null,
+      detail: openrouterConfigured ? "AI content moderation runs on new resource listings (off the request path, in the queue consumer)." : "No OpenRouter API key — AI moderation is skipped and listings are treated as clear (heuristics + user reports still apply).",
+      setup: "Create an API key at openrouter.ai/keys, then paste it below.",
     },
     {
       key: "d1", name: "D1 database", category: "Cloudflare", kind: "binding", required: true,
@@ -223,7 +229,25 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
   ];
 
   return json({
-    integrations,
+    // Cloudflare bindings (D1/KV/R2/Queues) are infra, not user-managed integrations — hidden from the UI.
+    integrations: integrations.filter((i) => i.category !== "Cloudflare"),
     deploy: { sha: env.GIT_SHA ?? "dev", deployed_at: env.DEPLOYED_AT ?? null },
   });
+}
+
+/**
+ * POST /api/admin/integrations/:key — set an editable API key (Resend, OpenRouter).
+ * The value is written to KV as a live override, since deploy-time `wrangler secret`s
+ * can't be written at runtime. The value is never logged or echoed back; the audit
+ * entry records only which key changed.
+ */
+export async function adminUpdateIntegration(req: Request, env: Env, auth: AuthContext | null, key: string): Promise<Response> {
+  if (!isAdmin(auth)) return forbidden();
+  if (!isEditableSecretKey(key)) return notFound();
+  const body = (await req.json().catch(() => ({}))) as { value?: unknown };
+  const value = typeof body.value === "string" ? body.value.trim() : "";
+  if (!value) return badRequest("Missing value");
+  await setSecret(env, EDITABLE_SECRETS[key].envName, value);
+  await audit(env, auth, "integration.update", { entityType: "integration", entityId: key });
+  return json({ ok: true });
 }
