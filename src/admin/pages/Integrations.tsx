@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { api } from "../../lib/api";
 
 interface Integration {
@@ -27,6 +28,52 @@ function statusFor(i: Integration): { label: string; classes: string } {
   }
   if (i.healthy === true) return { label: "Connected", classes: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" };
   return { label: "Configured", classes: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" };
+}
+
+/**
+ * Step-by-step setup instructions per integration. Editable keys (Resend, OpenRouter)
+ * end at the Save field below; the rest are deploy-time `wrangler secret`s. Falls back
+ * to the server-provided one-liner for any integration without hand-written steps.
+ */
+function setupSteps(i: Integration): ReactNode[] {
+  switch (i.key) {
+    case "google_oauth":
+      return [
+        <>In Google Cloud Console, open <b>APIs &amp; Services → Credentials</b>.</>,
+        <>Create an <b>OAuth 2.0 Client ID</b> of type <b>Web application</b>.</>,
+        <>Add <code>https://app.bidneighbor.com</code> to <b>Authorized JavaScript origins</b> and your OAuth callback URL to <b>Authorized redirect URIs</b>.</>,
+        <>Copy the <b>Client ID</b> and <b>Client secret</b>.</>,
+        <>From <code>cloud/</code>, run <code>wrangler secret put GOOGLE_OAUTH_CLIENT_ID</code> and <code>wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET</code>, then redeploy.</>,
+      ];
+    case "session_key":
+      return [
+        <>Generate 32+ random bytes, e.g. <code>openssl rand -base64 48</code>.</>,
+        <>From <code>cloud/</code>, run <code>wrangler secret put SESSION_SIGNING_KEY</code> and paste the value.</>,
+        <>Redeploy. Changing the key signs out all existing sessions.</>,
+      ];
+    case "resend":
+      return [
+        <>Create a <a className="underline" href="https://resend.com" target="_blank" rel="noreferrer">Resend</a> account and add the <b>bidneighbor.com</b> domain.</>,
+        <>Add the SPF/DKIM DNS records Resend shows you and wait for the domain to verify.</>,
+        <>Create an API key at <a className="underline" href="https://resend.com/api-keys" target="_blank" rel="noreferrer">resend.com/api-keys</a> with sending permission.</>,
+        <>Paste the key in the <b>field below</b> and click <b>Save</b>.</>,
+      ];
+    case "turnstile":
+      return [
+        <>In the Cloudflare dashboard, open <b>Turnstile</b> and add a widget for <code>app.bidneighbor.com</code>.</>,
+        <>Copy the widget's <b>Secret key</b>.</>,
+        <>From <code>cloud/</code>, run <code>wrangler secret put TURNSTILE_SECRET_KEY</code>, then redeploy.</>,
+        <>Put the matching <b>Site key</b> in the frontend Turnstile widget config.</>,
+      ];
+    case "openrouter":
+      return [
+        <>Create an account at <a className="underline" href="https://openrouter.ai" target="_blank" rel="noreferrer">openrouter.ai</a> and add credits.</>,
+        <>Create an API key at <a className="underline" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a>.</>,
+        <>Paste the key in the <b>field below</b> and click <b>Save</b>.</>,
+      ];
+    default:
+      return [i.setup];
+  }
 }
 
 /** Inline API-key setter for editable secrets (Resend, OpenRouter). Never shows the current value. */
@@ -128,11 +175,16 @@ export default function Integrations() {
                     </div>
                     <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${s.classes}`}>{s.label}</span>
                   </div>
-                  {(!i.configured || i.healthy === false) ? (
-                    <p className="mt-2 rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                      <span className="font-medium">Setup: </span>{i.setup}
-                    </p>
-                  ) : null}
+                  <details className="mt-3">
+                    <summary className="cursor-pointer select-none text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                      How to set this up
+                    </summary>
+                    <ol className="mt-2 list-decimal space-y-1 rounded-md bg-gray-50 py-3 pl-8 pr-4 text-xs leading-relaxed text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                      {setupSteps(i).map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                  </details>
                   {i.editable ? <SecretEditor integration={i} onSaved={load} /> : null}
                 </div>
               );
