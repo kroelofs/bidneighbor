@@ -16,6 +16,11 @@ INSERT OR IGNORE INTO categories (id, name, slug, is_active, created_at) VALUES
   ('cat_tree_work',          'Tree Work',          'tree-work',          1, '2026-01-01T00:00:00Z'),
   ('cat_concrete',           'Concrete',           'concrete',           1, '2026-01-01T00:00:00Z'),
   ('cat_farm_help',          'Farm Help',          'farm-help',          1, '2026-01-01T00:00:00Z'),
+  ('cat_tutoring',           'Tutoring',           'tutoring',           1, '2026-01-01T00:00:00Z'),
+  ('cat_music_lessons',      'Music Lessons',      'music-lessons',      1, '2026-01-01T00:00:00Z'),
+  ('cat_welding',            'Welding',            'welding',            1, '2026-01-01T00:00:00Z'),
+  ('cat_drywall_repair',     'Drywall Repair',     'drywall-repair',     1, '2026-01-01T00:00:00Z'),
+  ('cat_translation',        'Translation',        'translation',        1, '2026-01-01T00:00:00Z'),
   ('cat_misc',               'Miscellaneous',      'miscellaneous',      1, '2026-01-01T00:00:00Z');
 
 -- First superadmin. Change the email to the real admin before running in prod.
