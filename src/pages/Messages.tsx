@@ -35,7 +35,7 @@ export default function Messages({ me }: { me: Me | null }) {
   if (id) {
     const active = convos.find((c) => c.id === id);
     return (
-      <div className="mx-auto flex h-[70vh] max-w-2xl flex-col">
+      <div className="mx-auto flex h-[70dvh] max-w-2xl flex-col">
         <div className="mb-3 flex items-center gap-3">
           <button onClick={() => navigate("/messages")} className="text-sm text-brand-600 hover:underline">← All messages</button>
           {active ? (

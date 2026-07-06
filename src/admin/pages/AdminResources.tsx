@@ -28,7 +28,7 @@ export default function AdminResources() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Resources</h1>
         <select className="input !w-auto !py-2 text-sm" value={filter} onChange={(e) => setFilter(e.target.value as "flagged" | "all")}>
           <option value="flagged">Flagged queue</option>
@@ -50,10 +50,10 @@ export default function AdminResources() {
               </select>
             </div>
             <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-300">{r.description}</p>
-            <div className="mt-3 flex gap-2">
-              <button onClick={() => setStatus(r.id, "active")} className="btn-secondary !py-2 text-sm">Approve</button>
-              <button onClick={() => setStatus(r.id, "hidden")} className="btn-secondary !py-2 text-sm">Hide</button>
-              <button onClick={() => setStatus(r.id, "removed")} className="btn-secondary !py-2 text-sm">Remove</button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={() => setStatus(r.id, "active")} className="btn-secondary !py-2.5 text-sm">Approve</button>
+              <button onClick={() => setStatus(r.id, "hidden")} className="btn-secondary !py-2.5 text-sm">Hide</button>
+              <button onClick={() => setStatus(r.id, "removed")} className="btn-secondary !py-2.5 text-sm">Remove</button>
             </div>
           </div>
         ))}

@@ -22,7 +22,7 @@ export default function AuditLog() {
       <h1 className="text-2xl font-bold">Audit log</h1>
       <p className="mt-1 text-sm text-gray-500">Admin actions and impersonation events. Impersonated actions show both the user and the admin behind them.</p>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full min-w-[560px] text-left text-sm">
           <thead className="border-b border-gray-200 text-gray-500 dark:border-gray-800">
             <tr><th className="py-2">When</th><th>Action</th><th>Actor</th><th>Impersonator</th><th>Entity</th></tr>
           </thead>

@@ -50,7 +50,7 @@ export default function MyTasks({ me }: { me: Me | null }) {
                   type="button"
                   onClick={() => removeTask(t)}
                   disabled={removingId === t.id}
-                  className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                  className="-mr-2 px-2 py-1 text-xs text-red-600 hover:underline disabled:opacity-50"
                 >
                   {removingId === t.id ? "Removing…" : "Remove"}
                 </button>

@@ -44,14 +44,14 @@ export function UserMenu({ me }: { me: Me }) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-1 rounded-full p-0.5 hover:ring-2 hover:ring-brand-500"
+        className="flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-full p-0.5 hover:ring-2 hover:ring-brand-500"
       >
         <Avatar me={me} />
       </button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+          className="absolute right-0 z-50 mt-2 w-52 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
         >
           <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
             <p className="truncate text-sm font-medium">{me.name || "Account"}</p>

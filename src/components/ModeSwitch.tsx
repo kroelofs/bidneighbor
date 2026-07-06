@@ -52,7 +52,7 @@ export function ModeSwitch({
             aria-selected={active}
             title={t.hint}
             onClick={() => switchTo(t.mode)}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition sm:px-4 ${
+            className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 sm:py-1.5 ${
               active
                 ? "bg-brand-600 text-white shadow"
                 : "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"

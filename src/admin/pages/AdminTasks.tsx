@@ -20,8 +20,8 @@ export default function AdminTasks() {
       <div className="mt-4 space-y-2">
         {tasks.map((t) => (
           <div key={t.id} className="card flex items-center justify-between gap-3">
-            <div>
-              <p className="font-medium">{t.title}</p>
+            <div className="min-w-0">
+              <p className="truncate font-medium">{t.title}</p>
               <p className="text-xs text-gray-500">{t.county || "—"} · <span className="uppercase">{t.status}</span></p>
             </div>
             <select className="input !w-auto !py-2 text-sm" value={t.status} onChange={(e) => setStatus(t.id, e.target.value)}>

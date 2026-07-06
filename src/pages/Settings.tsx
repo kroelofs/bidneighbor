@@ -58,8 +58,8 @@ export default function Settings({ me, onChange }: { me: Me | null; onChange: ()
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-bold">Settings</h1>
-      <div className="mt-4 flex gap-6">
-        <nav className="w-40 shrink-0 space-y-1 text-sm">
+      <div className="mt-4 flex flex-col gap-6 sm:flex-row">
+        <nav className="w-full shrink-0 space-y-1 text-sm sm:w-40">
           <span className={`block rounded-md px-3 py-2 font-medium ${tab === "notifications" ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300" : ""}`}>
             Email notifications
           </span>
@@ -98,8 +98,8 @@ export default function Settings({ me, onChange }: { me: Me | null; onChange: ()
               />
             </div>
             {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-            <div className="mt-4 flex items-center gap-3">
-              <button onClick={save} disabled={busy} className="btn-primary disabled:opacity-60">
+            <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <button onClick={save} disabled={busy} className="btn-primary w-full disabled:opacity-60 sm:w-auto">
                 {busy ? "Saving…" : "Save changes"}
               </button>
               {saved ? <span className="text-sm text-green-600">Saved</span> : null}

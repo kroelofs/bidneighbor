@@ -71,8 +71,8 @@ export default function Integrations() {
               return (
                 <div key={i.key} className="card">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">{i.name} {i.required ? <span className="text-xs text-gray-400">(required)</span> : null}</h3>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold">{i.name}{i.required ? <span className="text-xs text-gray-400">(required)</span> : null}</h3>
                       <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{i.detail}</p>
                     </div>
                     <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${s.classes}`}>{s.label}</span>
