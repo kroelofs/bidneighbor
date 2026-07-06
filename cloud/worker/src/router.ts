@@ -117,6 +117,7 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
     if ((m = match("/api/admin/categories/:id", path)) && method === "PATCH") return categories.updateCategory(req, env, ctx.auth, m.id);
     if (path === "/api/admin/audit-log" && method === "GET") return admin.adminAuditLog(req, env, ctx.auth);
     if (path === "/api/admin/integrations" && method === "GET") return admin.adminIntegrations(req, env, ctx.auth);
+    if ((m = match("/api/admin/integrations/:key/usage", path)) && method === "GET") return admin.adminIntegrationUsage(req, env, ctx.auth, m.key);
     if ((m = match("/api/admin/integrations/:key", path)) && method === "POST") return admin.adminUpdateIntegration(req, env, ctx.auth, m.key);
     if (path === "/api/admin/resources" && method === "GET") return resources.adminListResources(req, env, ctx.auth);
     if ((m = match("/api/admin/resources/:id", path)) && method === "PATCH") return resources.adminUpdateResource(req, env, ctx.auth, m.id);
