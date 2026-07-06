@@ -60,6 +60,7 @@ export async function routeApi(ctx: Ctx): Promise<Response | null> {
   if ((m = match("/api/tasks/:id", path))) {
     if (method === "GET") return tasks.getTask(req, env, ctx.auth, m.id);
     if (method === "PATCH") return tasks.updateTask(req, env, ctx.auth, m.id);
+    if (method === "DELETE") return tasks.deleteTask(req, env, ctx.auth, m.id);
   }
   if ((m = match("/api/tasks/:id/files", path)) && method === "POST") return files.uploadTaskFile(req, env, ctx.auth, m.id);
   if ((m = match("/api/tasks/:id/responses", path))) {

@@ -115,7 +115,7 @@ export async function getTask(_req: Request, env: Env, auth: AuthContext | null,
     `SELECT t.*, c.name AS category_name FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
      WHERE ${filter.clause} ORDER BY t.id LIMIT 1`,
   ).bind(...filter.binds).first<TaskRow & { category_name: string }>();
-  if (!task || task.status === "hidden") return notFound();
+  if (!task || task.status === "hidden" || task.status === "deleted") return notFound();
   const files = await env.DB.prepare(
     "SELECT id, filename, content_type FROM task_files WHERE task_id = ? ORDER BY created_at",
   ).bind(task.id).all();
@@ -129,7 +129,7 @@ export async function myTasks(_req: Request, env: Env, auth: AuthContext | null)
   const { results } = await env.DB.prepare(
     `SELECT t.*, c.name AS category_name FROM tasks t
      LEFT JOIN categories c ON c.id = t.category_id
-     WHERE t.customer_id = ? AND t.status != 'hidden' ORDER BY t.created_at DESC LIMIT 100`,
+     WHERE t.customer_id = ? AND t.status NOT IN ('hidden', 'deleted') ORDER BY t.created_at DESC LIMIT 100`,
   ).bind(auth.user.id).all<TaskRow & { category_name: string }>();
   return json({ tasks: (results ?? []).map((t) => publicTask(t, env.APP_BASE_URL)) });
 }
@@ -154,6 +154,18 @@ export async function updateTask(req: Request, env: Env, auth: AuthContext | nul
   sets.push("updated_at = ?"); binds.push(now());
   binds.push(id);
   await env.DB.prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`).bind(...binds).run();
+  return json({ ok: true });
+}
+
+/** DELETE /api/tasks/:id — owner removes their own task (soft delete).
+ *  Sets status = 'deleted' so it drops out of `my-tasks`, the public board, and
+ *  detail views, while preserving the row (and any responses) for moderation/audit. */
+export async function deleteTask(_req: Request, env: Env, auth: AuthContext | null, id: string): Promise<Response> {
+  if (!auth) return unauthorized();
+  const task = await env.DB.prepare("SELECT customer_id FROM tasks WHERE id = ?").bind(id).first<{ customer_id: string }>();
+  if (!task) return notFound();
+  if (task.customer_id !== auth.user.id) return forbidden();
+  await env.DB.prepare("UPDATE tasks SET status = 'deleted', updated_at = ? WHERE id = ?").bind(now(), id).run();
   return json({ ok: true });
 }
 
