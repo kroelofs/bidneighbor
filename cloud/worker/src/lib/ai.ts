@@ -1,5 +1,12 @@
 import type { Env } from "../types";
 import { getSecret } from "./secrets";
+import { recordOpenRouterUsage } from "./usage";
+
+/** OpenRouter returns `usage.cost` (USD) when the request sets usage:{include:true}. */
+type OpenRouterData = {
+  choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
+  usage?: { cost?: number };
+} | null;
 
 /**
  * AI content moderation via OpenRouter (OpenAI-compatible chat/completions, raw fetch —
@@ -79,6 +86,7 @@ export async function moderateContent(env: Env, text: string): Promise<Moderatio
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 256,
+        usage: { include: true }, // ask OpenRouter to return usage.cost for the tracker
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: `Listing to moderate:\n\n${text}` },
@@ -97,9 +105,9 @@ export async function moderateContent(env: Env, text: string): Promise<Moderatio
     return { risky: false };
   }
 
-  const data = (await res.json().catch(() => null)) as {
-    choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
-  } | null;
+  const data = (await res.json().catch(() => null)) as OpenRouterData;
+  // Record spend regardless of how the verdict parses — the call cost money either way.
+  await recordOpenRouterUsage(env, MODEL, "moderation", data?.usage?.cost ?? 0);
   // Forced tool_choice → arguments is a JSON string; some models instead put the JSON in content.
   const raw =
     data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ??
@@ -174,6 +182,7 @@ export async function draftResourceFromImage(env: Env, imageDataUrl: string): Pr
       body: JSON.stringify({
         model: MODEL, // openai/gpt-4o-mini is vision-capable
         max_tokens: 500,
+        usage: { include: true }, // ask OpenRouter to return usage.cost for the tracker
         messages: [
           {
             role: "system",
@@ -202,9 +211,8 @@ export async function draftResourceFromImage(env: Env, imageDataUrl: string): Pr
     return null;
   }
 
-  const data = (await res.json().catch(() => null)) as {
-    choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
-  } | null;
+  const data = (await res.json().catch(() => null)) as OpenRouterData;
+  await recordOpenRouterUsage(env, MODEL, "draft", data?.usage?.cost ?? 0);
   const raw =
     data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ??
     data?.choices?.[0]?.message?.content;

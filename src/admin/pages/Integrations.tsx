@@ -11,12 +11,21 @@ interface Integration {
   configured: boolean;
   healthy: boolean | null;
   editable?: boolean;
+  usage?: boolean;
   detail: string;
   setup: string;
 }
 interface IntegrationsResponse {
   integrations: Integration[];
   deploy: { sha: string; deployed_at: string | null };
+}
+interface UsageReport {
+  key: string;
+  title: string;
+  unit: "usd" | "count";
+  series: { label: string; value: number; sub?: string }[];
+  summary: { label: string; value: string }[];
+  empty: boolean;
 }
 
 function statusFor(i: Integration): { label: string; classes: string } {
@@ -126,6 +135,82 @@ function SecretEditor({ integration, onSaved }: { integration: Integration; onSa
   );
 }
 
+function fmtValue(unit: UsageReport["unit"], v: number): string {
+  if (unit === "usd") return v === 0 ? "$0" : v < 1 ? `$${v.toFixed(4)}` : `$${v.toFixed(2)}`;
+  return String(v);
+}
+
+/**
+ * Collapsed-by-default usage/cost dropdown for a card (OpenRouter daily cost, Resend
+ * weekly sends). Lazy-fetches the report the first time it's opened, so closed cards
+ * cost nothing. Renders summary chips + a lightweight bar chart (no chart library).
+ */
+function UsagePanel({ integration }: { integration: Integration }) {
+  const [report, setReport] = useState<UsageReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const loadOnce = () => {
+    if (report || loading) return;
+    setLoading(true);
+    setErr(null);
+    api
+      .get<UsageReport>(`/api/admin/integrations/${integration.key}/usage`)
+      .then(setReport)
+      .catch((e) => setErr((e as Error).message))
+      .finally(() => setLoading(false));
+  };
+
+  const max = report ? Math.max(...report.series.map((p) => p.value), 0) : 0;
+
+  return (
+    <details className="mt-3" onToggle={(e) => (e.currentTarget as HTMLDetailsElement).open && loadOnce()}>
+      <summary className="cursor-pointer select-none text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+        Usage &amp; {integration.key === "openrouter" ? "cost" : "volume"}
+      </summary>
+      <div className="mt-2 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
+        {loading ? <p className="text-xs text-gray-500">Loading…</p> : null}
+        {err ? <p className="text-xs text-red-600">{err}</p> : null}
+        {report ? (
+          report.empty ? (
+            <p className="text-xs text-gray-500">No usage recorded yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {report.summary.map((s) => (
+                  <div key={s.label} className="rounded-md bg-white px-3 py-1.5 text-xs shadow-sm dark:bg-gray-900">
+                    <div className="text-gray-500 dark:text-gray-400">{s.label}</div>
+                    <div className="text-sm font-semibold tabular-nums">{s.value}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 mb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{report.title}</p>
+              <div className="flex h-24 items-end gap-1">
+                {report.series.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="group relative flex-1"
+                    title={`${p.label}: ${fmtValue(report.unit, p.value)}${p.sub ? ` (${p.sub})` : ""}`}
+                  >
+                    <div
+                      className="w-full rounded-t bg-blue-500/80 transition-colors group-hover:bg-blue-600 dark:bg-blue-500/60"
+                      style={{ height: max > 0 ? `${Math.max((p.value / max) * 100, p.value > 0 ? 4 : 0)}%` : "0%" }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] text-gray-400">
+                <span>{report.series[0]?.label}</span>
+                <span>{report.series[report.series.length - 1]?.label}</span>
+              </div>
+            </>
+          )
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 export default function Integrations() {
   const [data, setData] = useState<IntegrationsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +270,7 @@ export default function Integrations() {
                       ))}
                     </ol>
                   </details>
+                  {i.usage ? <UsagePanel integration={i} /> : null}
                   {i.editable ? <SecretEditor integration={i} onSaved={load} /> : null}
                 </div>
               );

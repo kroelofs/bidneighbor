@@ -3,6 +3,7 @@ import { json, badRequest, forbidden, notFound, now } from "../lib/http";
 import { isAdmin, canImpersonate } from "../lib/guards";
 import { audit } from "../lib/audit";
 import { EDITABLE_SECRETS, isEditableSecretKey, isSecretConfigured, setSecret } from "../lib/secrets";
+import { openrouterUsageReport, resendUsageReport } from "../lib/usage";
 import { createSession } from "../lib/session";
 import { getUserById } from "../lib/users";
 import { randomToken } from "../lib/crypto";
@@ -129,6 +130,8 @@ interface IntegrationStatus {
   healthy: boolean | null;
   /** True when the key can be set live from this page (stored as a KV override). */
   editable?: boolean;
+  /** True when GET /api/admin/integrations/:key/usage returns a usage/cost report. */
+  usage?: boolean;
   detail: string;
   setup: string;
 }
@@ -185,7 +188,7 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
       setup: "Generate 32+ random bytes and set SESSION_SIGNING_KEY via `wrangler secret put`.",
     },
     {
-      key: "resend", name: "Resend (email)", category: "Email", kind: "secret", required: true, editable: true,
+      key: "resend", name: "Resend (email)", category: "Email", kind: "secret", required: true, editable: true, usage: true,
       configured: resendConfigured, healthy: null,
       detail: resendConfigured ? `Transactional email enabled. From: ${env.EMAIL_FROM}` : "No Resend API key — magic-link & notification emails are logged to the console instead of sent.",
       setup: "Verify the bidneighbor.com domain in Resend (SPF/DKIM), create an API key at resend.com/api-keys, then paste it below.",
@@ -197,7 +200,7 @@ export async function adminIntegrations(_req: Request, env: Env, auth: AuthConte
       setup: "Create a Turnstile widget in the Cloudflare dashboard; set TURNSTILE_SECRET_KEY via `wrangler secret put` and the site key in the frontend.",
     },
     {
-      key: "openrouter", name: "OpenRouter (AI moderation)", category: "AI", kind: "secret", required: false, editable: true,
+      key: "openrouter", name: "OpenRouter (AI moderation)", category: "AI", kind: "secret", required: false, editable: true, usage: true,
       configured: openrouterConfigured, healthy: null,
       detail: openrouterConfigured ? "AI content moderation runs on new resource listings (off the request path, in the queue consumer)." : "No OpenRouter API key — AI moderation is skipped and listings are treated as clear (heuristics + user reports still apply).",
       setup: "Create an API key at openrouter.ai/keys, then paste it below.",
@@ -250,4 +253,15 @@ export async function adminUpdateIntegration(req: Request, env: Env, auth: AuthC
   await setSecret(env, EDITABLE_SECRETS[key].envName, value);
   await audit(env, auth, "integration.update", { entityType: "integration", entityId: key });
   return json({ ok: true });
+}
+
+/**
+ * GET /api/admin/integrations/:key/usage — usage/cost report for a card's dropdown.
+ * openrouter → daily AI spend; resend → weekly emails sent. Read-only aggregates.
+ */
+export async function adminIntegrationUsage(_req: Request, env: Env, auth: AuthContext | null, key: string): Promise<Response> {
+  if (!isAdmin(auth)) return forbidden();
+  if (key === "openrouter") return json(await openrouterUsageReport(env));
+  if (key === "resend") return json(await resendUsageReport(env));
+  return notFound();
 }
