@@ -66,6 +66,7 @@ export interface Task {
   budget_cents: number | null;
   timeframe: string | null;
   status: string;
+  selected_response_id?: string | null;
   created_at: string;
   slug: string;
   share_url: string;

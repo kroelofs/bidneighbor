@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, money, type Task, type Me } from "../lib/api";
+import StatusChip from "../components/StatusChip";
 
 export default function MyTasks({ me }: { me: Me | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -45,7 +46,7 @@ export default function MyTasks({ me }: { me: Me | null }) {
                 <p className="mt-1 text-sm text-gray-500">{t.category_name} {t.budget_cents !== null ? `· ${money(t.budget_cents)}` : ""}</p>
               </Link>
               <div className="flex flex-col items-end gap-2">
-                <span className="text-xs uppercase text-gray-400">{t.status}</span>
+                <StatusChip status={t.status} kind="task" />
                 <button
                   type="button"
                   onClick={() => removeTask(t)}

@@ -41,6 +41,7 @@ function publicTask(t: TaskRow & { category_name?: string }, appBase: string) {
     budget_cents: t.budget_cents,
     timeframe: t.timeframe,
     status: t.status,
+    selected_response_id: t.selected_response_id,
     created_at: t.created_at,
     slug,
     share_url: `${appBase}/tasks/${slug}`,
