@@ -45,7 +45,12 @@ async function handleJob(job: NotificationJob, env: Env): Promise<void> {
          JOIN user_categories uc ON uc.user_id = u.id AND uc.category_id = ?
          WHERE u.status = 'active' AND u.notify_new_tasks = 1 AND (u.county = ? OR ? IS NULL)`,
       ).bind(task.category_id, task.county, task.county).all<{ id: string; email: string }>();
-      for (const provider of results ?? []) {
+      const recipients = results ?? [];
+      // Record how many providers we reached so the poster gets a real "we notified
+      // N providers nearby" instead of staring at zero bids. Written once, by PK.
+      await env.DB.prepare("UPDATE tasks SET notified_provider_count = ? WHERE id = ?")
+        .bind(recipients.length, task.id).run();
+      for (const provider of recipients) {
         await recordAndSend(env, provider.id, "task_posted", provider.email, "New local job posted",
           layout("New job near you", `<p>A new <b>${task.category_name}</b> job was posted in ${task.county ?? "your area"}: <b>${task.title}</b>.</p>
            <p><a href="${env.APP_BASE_URL}/tasks/${task.id}">View the job</a></p>`));

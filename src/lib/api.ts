@@ -67,6 +67,7 @@ export interface Task {
   timeframe: string | null;
   status: string;
   selected_response_id?: string | null;
+  notified_provider_count?: number;
   created_at: string;
   slug: string;
   share_url: string;
