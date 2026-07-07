@@ -8,6 +8,7 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const category = params.get("category") ?? "";
   const county = params.get("county") ?? "";
@@ -17,14 +18,20 @@ export default function Tasks() {
     api.get<{ categories: Category[] }>("/api/categories").then((d) => setCats(d.categories)).catch(() => {});
   }, []);
 
-  useEffect(() => {
+  const load = () => {
     setLoading(true);
+    setError(false);
     const qs = new URLSearchParams();
     if (category) qs.set("category", category);
     if (county) qs.set("county", county);
     if (town) qs.set("town", town);
-    api.get<{ tasks: Task[] }>(`/api/tasks?${qs.toString()}`).then((d) => setTasks(d.tasks)).finally(() => setLoading(false));
-  }, [category, county, town]);
+    api.get<{ tasks: Task[] }>(`/api/tasks?${qs.toString()}`)
+      .then((d) => setTasks(d.tasks))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(load, [category, county, town]);
 
   const setFilter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -55,6 +62,11 @@ export default function Tasks() {
       <div className="mt-5 space-y-3">
         {loading ? (
           <p className="text-gray-500">Loading…</p>
+        ) : error ? (
+          <div className="card text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Couldn't load jobs just now.</p>
+            <button onClick={load} className="btn-secondary mt-3 !py-2 text-sm">Try again</button>
+          </div>
         ) : tasks.length === 0 ? (
           <p className="text-gray-500">No open jobs match your filters yet.</p>
         ) : (

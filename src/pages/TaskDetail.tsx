@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { api, money, openConversation, type Task, type Me } from "../lib/api";
 import { useMode } from "../lib/mode";
+import StatusChip from "../components/StatusChip";
 
 interface ResponseItem {
   id: string;
@@ -21,6 +22,7 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   const { mode, setMode } = useMode();
   const [params] = useSearchParams();
   const [task, setTask] = useState<Task | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [responses, setResponses] = useState<ResponseItem[]>([]);
@@ -28,6 +30,8 @@ export default function TaskDetail({ me }: { me: Me | null }) {
   const [message, setMessage] = useState("");
   const [quote, setQuote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [selecting, setSelecting] = useState<string | null>(null);
 
   const taskId = task?.id;
 
@@ -36,7 +40,7 @@ export default function TaskDetail({ me }: { me: Me | null }) {
     api.get<{ responses: ResponseItem[] }>(`/api/tasks/${taskId}/responses`).then((d) => setResponses(d.responses)).catch(() => {});
   };
 
-  useEffect(() => {
+  const loadTask = () => {
     if (!ref) return;
     api.get<{ task: Task; files: FileItem[]; is_owner?: boolean }>(`/api/tasks/${ref}`).then((d) => {
       setTask(d.task);
@@ -47,10 +51,21 @@ export default function TaskDetail({ me }: { me: Me | null }) {
       if (window.location.pathname !== canonical) {
         window.history.replaceState(null, "", canonical + window.location.search);
       }
-    }).catch(() => setTask(null));
-  }, [ref]);
+    }).catch(() => { setTask(null); setLoadError(true); });
+  };
+
+  useEffect(loadTask, [ref]);
   useEffect(loadResponses, [taskId, me]);
 
+  // A missing/removed task (deleted listing, dead shared link) must not look like an
+  // eternal spinner — tell the visitor plainly and give them a way back.
+  if (loadError) return (
+    <div className="card mx-auto max-w-md text-center">
+      <p className="font-medium">This task isn't available.</p>
+      <p className="mt-1 text-sm text-gray-500">It may have been removed or the link is out of date.</p>
+      <Link to="/tasks" className="btn-primary mt-4 inline-flex">Browse local jobs</Link>
+    </div>
+  );
   if (!task) return <p className="text-gray-500">Loading…</p>;
   // Ownership comes straight from the API (it knows the task's customer_id); no more
   // guessing from response counts. The owner always sees owner controls; a non-owner
@@ -74,9 +89,30 @@ export default function TaskDetail({ me }: { me: Me | null }) {
     }
   };
 
-  const select = async (responseId: string) => {
-    await api.post(`/api/tasks/${taskId}/select-response`, { response_id: responseId }).catch(() => {});
-    loadResponses();
+  const select = async (r: ResponseItem) => {
+    const who = r.provider.name || "this provider";
+    if (!confirm(`Hire ${who}? They'll be notified and your task will be marked as assigned. Other providers won't be selected.`)) return;
+    setError(null);
+    setSelecting(r.id);
+    try {
+      await api.post(`/api/tasks/${taskId}/select-response`, { response_id: r.id });
+      loadTask();
+      loadResponses();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSelecting(null);
+    }
+  };
+
+  const copyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(task!.share_url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — the link stays visible for manual copy */
+    }
   };
 
   // Open (or reuse) a private thread and jump to it. The owner names the counterpart;
@@ -96,11 +132,17 @@ export default function TaskDetail({ me }: { me: Me | null }) {
       {params.get("posted") ? (
         <div className="card mb-4 border-green-300 bg-green-50 dark:bg-green-900/20">
           <p className="font-medium">Your task is live! Share this link:</p>
-          <code className="text-sm break-all">{task.share_url}</code>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="min-w-0 flex-1 break-all text-sm">{task.share_url}</code>
+            <button onClick={copyShareUrl} className="btn-secondary !py-2 text-sm">{copied ? "Copied ✓" : "Copy link"}</button>
+          </div>
         </div>
       ) : null}
 
-      <h1 className="text-2xl font-bold">{task.title}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="text-2xl font-bold">{task.title}</h1>
+        <div className="mt-1"><StatusChip status={task.status} kind="task" /></div>
+      </div>
       <p className="mt-1 text-sm text-gray-500">
         {task.category_name} · {task.town || task.county} {task.timeframe ? `· ${task.timeframe}` : ""}
         {task.budget_cents !== null ? ` · ${money(task.budget_cents)}` : ""}
@@ -145,7 +187,11 @@ export default function TaskDetail({ me }: { me: Me | null }) {
       {!me ? (
         <p className="mt-6 text-sm text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to respond to this job.</p>
       ) : isOwner ? (
-        <p className="mt-6 text-sm text-gray-500">This is your task. Responses from providers appear below.</p>
+        <p className="mt-6 text-sm text-gray-500">
+          {responses.length === 0
+            ? "This is your task. We're notifying matching providers nearby — responses will appear here as they come in."
+            : "This is your task. Review the bids below and hire a provider."}
+        </p>
       ) : !canRespond ? (
         <p className="mt-6 text-sm text-gray-500">This task is no longer open for new bids.</p>
       ) : mode === "provider" ? (
@@ -177,9 +223,12 @@ export default function TaskDetail({ me }: { me: Me | null }) {
               </select>
             ) : null}
           </div>
+          {ownerView && error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
           <div className="mt-3 space-y-3">
-            {sorted.map((r) => (
-              <div key={r.id} className="card">
+            {sorted.map((r) => {
+              const isWinner = task.selected_response_id === r.id;
+              return (
+              <div key={r.id} className={`card ${isWinner ? "border-green-400 dark:border-green-600" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-medium">{r.provider.name || "Provider"} {r.provider.town ? `· ${r.provider.town}` : ""}</p>
@@ -187,6 +236,13 @@ export default function TaskDetail({ me }: { me: Me | null }) {
                   </div>
                   {r.quote_cents !== null ? <span className="font-semibold text-brand-600">{money(r.quote_cents)}</span> : null}
                 </div>
+                {isWinner ? (
+                  <p className="mt-2">
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                      {ownerView ? "✓ Hired" : "🎉 You were hired"}
+                    </span>
+                  </p>
+                ) : null}
                 <p className="mt-2 whitespace-pre-wrap text-sm">{r.message}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {ownerView ? (
@@ -195,11 +251,14 @@ export default function TaskDetail({ me }: { me: Me | null }) {
                     <button onClick={() => openThread()} className="btn-secondary !py-2 text-sm">Message the poster</button>
                   )}
                   {ownerView && task.status === "open" ? (
-                    <button onClick={() => select(r.id)} className="btn-primary !py-2 text-sm">Select this provider</button>
+                    <button onClick={() => select(r)} disabled={selecting !== null} className="btn-primary !py-2 text-sm disabled:opacity-60">
+                      {selecting === r.id ? "Hiring…" : "Hire this provider"}
+                    </button>
                   ) : null}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : null}
