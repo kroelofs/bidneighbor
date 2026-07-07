@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { api, type ConversationSummary } from "../lib/api";
 import { ThemeToggle } from "./ThemeToggle";
@@ -46,6 +46,12 @@ export function Layout({
   const [setupOpen, setSetupOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
+  // An open conversation (/messages/:id) becomes a full-screen chat: the app header
+  // stays pinned on top, the footer is dropped, and the page itself doesn't scroll —
+  // the thread fills the space below the header so its composer sits on the screen edge.
+  const { pathname } = useLocation();
+  const isThread = /^\/messages\/.+/.test(pathname);
+
   // Poll the inbox for an unread badge while signed in.
   useEffect(() => {
     if (!me) { setUnread(0); return; }
@@ -66,7 +72,7 @@ export function Layout({
     ) : null;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className={`flex flex-col ${isThread ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}>
       {impersonating ? <ImpersonationBanner adminName={impersonating.by_admin_name} /> : null}
       <header className="border-b border-gray-200 bg-white/90 backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
@@ -111,7 +117,8 @@ export function Layout({
           ) : null}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">{children}</main>
+      <main className={`mx-auto w-full max-w-4xl flex-1 ${isThread ? "flex min-h-0 flex-col overflow-hidden" : "px-4 py-6"}`}>{children}</main>
+      {isThread ? null : (
       <footer className="mt-12 border-t border-gray-200 dark:border-gray-800">
         <div className="mx-auto flex max-w-4xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-gray-500 sm:flex-row">
           <p>© {new Date().getFullYear()} BidNeighbor</p>
@@ -125,6 +132,7 @@ export function Layout({
           </nav>
         </div>
       </footer>
+      )}
       {setupOpen && me ? (
         <ProviderSetup
           me={me}
