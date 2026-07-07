@@ -188,9 +188,11 @@ export default function TaskDetail({ me }: { me: Me | null }) {
         <p className="mt-6 text-sm text-gray-500"><Link to="/login" className="text-brand-600 underline">Sign in</Link> to respond to this job.</p>
       ) : isOwner ? (
         <p className="mt-6 text-sm text-gray-500">
-          {responses.length === 0
-            ? "This is your task. We're notifying matching providers nearby — responses will appear here as they come in."
-            : "This is your task. Review the bids below and hire a provider."}
+          {responses.length > 0
+            ? "This is your task. Review the bids below and hire a provider."
+            : (task.notified_provider_count ?? 0) > 0
+              ? `This is your task. We notified ${task.notified_provider_count} ${task.notified_provider_count === 1 ? "provider" : "providers"} nearby — most tasks get a first response within a day. Bids will appear here.`
+              : "This is your task. We're notifying matching providers nearby — responses will appear here as they come in."}
         </p>
       ) : !canRespond ? (
         <p className="mt-6 text-sm text-gray-500">This task is no longer open for new bids.</p>

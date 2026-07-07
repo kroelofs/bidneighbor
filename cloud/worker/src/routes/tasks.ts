@@ -20,6 +20,7 @@ interface TaskRow {
   timeframe: string | null;
   status: string;
   selected_response_id: string | null;
+  notified_provider_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +43,7 @@ function publicTask(t: TaskRow & { category_name?: string }, appBase: string) {
     timeframe: t.timeframe,
     status: t.status,
     selected_response_id: t.selected_response_id,
+    notified_provider_count: t.notified_provider_count,
     created_at: t.created_at,
     slug,
     share_url: `${appBase}/tasks/${slug}`,
